@@ -104,3 +104,12 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Unity project is nested one level below the repository root.
+/K-boomRoo/[Ll]ibrary/
+/K-boomRoo/[Tt]emp/
+/K-boomRoo/[Oo]bj/
+/K-boomRoo/[Bb]uild/
+/K-boomRoo/[Bb]uilds/
+/K-boomRoo/[Ll]ogs/
+/K-boomRoo/[Uu]ser[Ss]ettings/
