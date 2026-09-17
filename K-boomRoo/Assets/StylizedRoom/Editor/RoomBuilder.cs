@@ -10,6 +10,7 @@ namespace StylizedRoom
         private const string TEX_PATH = ROOT + "/Textures";
         private const string MAT_PATH = ROOT + "/Materials";
         private const string PREFAB_PATH = ROOT + "/Prefabs";
+        private const string PROPS_PATH = ROOT + "/Props";
 
         [MenuItem("Stylized Room/Rebuild Complete Room (First Person WASD)", false, 1)]
         public static void RebuildRoomFirstPerson()
@@ -27,8 +28,8 @@ namespace StylizedRoom
 
             Selection.activeGameObject = room;
             SceneView.FrameLastActiveSceneView();
-            Debug.Log("[StylizedRoom] ¡Habitación lista para explorar en Primera Persona con WASD!");
-            EditorUtility.DisplayDialog("Modo Primera Persona Listo", "¡Habitación configurada con éxito!\n\n- Cámara en primera persona (altura de los ojos: 1.65m).\n- Controles: WASD para moverte, Ratón para mirar, Shift para correr, Escape para liberar el cursor.\n- Habitación cerrada con colisionadores.\n\n¡Dale al botón PLAY para caminar adentro!", "¡Entendido!");
+            Debug.Log("[StylizedRoom] ¡Habitación, mesa y silla listas para explorar en Primera Persona con WASD!");
+            EditorUtility.DisplayDialog("Habitación, Mesa y Silla Listas", "¡Habitación completa configurada con éxito!\n\n- Mesa redonda rústica y silla ornada integradas.\n- Cámara en primera persona (WASD + Ratón).\n- Habitación cerrada con colisionadores.\n\n¡Dale al botón PLAY para caminar adentro!", "¡Excelente!");
         }
 
         [MenuItem("Stylized Room/Setup Materials Only", false, 10)]
@@ -79,6 +80,24 @@ namespace StylizedRoom
                 mat.SetFloat("_Metallic", 0.90f);
             });
 
+            CreateOrUpdateMaterial("Mat_OrnateChair", litShader, mat =>
+            {
+                Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>($"{PROPS_PATH}/Chair/Meshy_AI_Ornate_Wooden_Chair_0915164651_texture.png");
+                if (tex != null) mat.SetTexture("_BaseMap", tex);
+                mat.SetColor("_BaseColor", Color.white);
+                mat.SetFloat("_Smoothness", 0.35f);
+                mat.SetFloat("_Metallic", 0.05f);
+            });
+
+            CreateOrUpdateMaterial("Mat_RusticTable", litShader, mat =>
+            {
+                Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>($"{PROPS_PATH}/Table/Meshy_AI_Rustic_Round_Wooden_T_0915165031_texture.png");
+                if (tex != null) mat.SetTexture("_BaseMap", tex);
+                mat.SetColor("_BaseColor", Color.white);
+                mat.SetFloat("_Smoothness", 0.30f);
+                mat.SetFloat("_Metallic", 0.02f);
+            });
+
             AssetDatabase.SaveAssets();
         }
 
@@ -113,6 +132,8 @@ namespace StylizedRoom
             Material matRightWall = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_PATH}/Mat_RightWall.mat");
             Material matTrim = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_PATH}/Mat_WoodTrim.mat");
             Material matKnob = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_PATH}/Mat_BrassKnob.mat");
+            Material matChair = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_PATH}/Mat_OrnateChair.mat");
+            Material matTable = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_PATH}/Mat_RusticTable.mat");
 
             // 1. PISO (4x4m)
             GameObject floorObj = new GameObject("Floor");
@@ -168,7 +189,7 @@ namespace StylizedRoom
             colRight.size = new Vector3(4.0f, 2.8f, 0.1f);
             colRight.center = new Vector3(0.0f, 1.4f, 2.05f);
 
-            // 4. PARED FRONTAL OPUESTA (Z = -2.0m) para cerrar el cuarto en 1ra persona
+            // 4. PARED FRONTAL OPUESTA (Z = -2.0m)
             GameObject frontWallZ = new GameObject("Wall_Front_Z");
             frontWallZ.transform.SetParent(root.transform, false);
             MeshFilter mfFrontZ = frontWallZ.AddComponent<MeshFilter>();
@@ -186,7 +207,7 @@ namespace StylizedRoom
             colFrontZ.size = new Vector3(4.0f, 2.8f, 0.1f);
             colFrontZ.center = new Vector3(0.0f, 1.4f, -2.05f);
 
-            // 5. PARED LATERAL OPUESTA (X = 2.0m) para cerrar el cuarto en 1ra persona
+            // 5. PARED LATERAL OPUESTA (X = 2.0m)
             GameObject frontWallX = new GameObject("Wall_Front_X");
             frontWallX.transform.SetParent(root.transform, false);
             MeshFilter mfFrontX = frontWallX.AddComponent<MeshFilter>();
@@ -219,33 +240,26 @@ namespace StylizedRoom
             );
             mrCeil.sharedMaterial = matTrim;
 
-            // ==========================================
             // 7. MOLDURAS 3D PERIMETRALES
-            // ==========================================
             GameObject trimRoot = new GameObject("3D_Moldings");
             trimRoot.transform.SetParent(root.transform, false);
 
-            // Cornisas de techo perimetrales
             CreateBox(trimRoot, "Crown_Left", new Vector3(-1.96f, 2.76f, 0.0f), new Vector3(0.08f, 0.08f, 4.04f), matTrim);
             CreateBox(trimRoot, "Crown_Right", new Vector3(0.0f, 2.76f, 1.96f), new Vector3(4.04f, 0.08f, 0.08f), matTrim);
             CreateBox(trimRoot, "Crown_FrontZ", new Vector3(0.0f, 2.76f, -1.96f), new Vector3(4.04f, 0.08f, 0.08f), matTrim);
             CreateBox(trimRoot, "Crown_FrontX", new Vector3(1.96f, 2.76f, 0.0f), new Vector3(0.08f, 0.08f, 4.04f), matTrim);
 
-            // Chair Rails (moldura intermedia a 1m)
             CreateBox(trimRoot, "ChairRail_Left", new Vector3(-1.98f, 0.96f, 0.0f), new Vector3(0.04f, 0.06f, 4.02f), matTrim);
             CreateBox(trimRoot, "ChairRail_Right", new Vector3(0.0f, 0.96f, 1.98f), new Vector3(4.02f, 0.06f, 0.04f), matTrim);
             CreateBox(trimRoot, "ChairRail_FrontZ", new Vector3(0.0f, 0.96f, -1.98f), new Vector3(4.02f, 0.06f, 0.04f), matTrim);
             CreateBox(trimRoot, "ChairRail_FrontX", new Vector3(1.98f, 0.96f, 0.0f), new Vector3(0.04f, 0.06f, 4.02f), matTrim);
 
-            // Rodapiés base inferior
             CreateBox(trimRoot, "Baseboard_Left", new Vector3(-1.98f, 0.06f, 0.0f), new Vector3(0.04f, 0.12f, 4.02f), matTrim);
             CreateBox(trimRoot, "Baseboard_Right", new Vector3(0.0f, 0.06f, 1.98f), new Vector3(4.02f, 0.12f, 0.04f), matTrim);
             CreateBox(trimRoot, "Baseboard_FrontZ", new Vector3(0.0f, 0.06f, -1.98f), new Vector3(4.02f, 0.12f, 0.04f), matTrim);
             CreateBox(trimRoot, "Baseboard_FrontX", new Vector3(1.98f, 0.06f, 0.0f), new Vector3(0.04f, 0.12f, 4.02f), matTrim);
 
-            // ==========================================
             // 8. RELIEVES 3D DE PUERTA Y VENTANA
-            // ==========================================
             GameObject detailsRoot = new GameObject("3D_Features");
             detailsRoot.transform.SetParent(root.transform, false);
 
@@ -272,6 +286,60 @@ namespace StylizedRoom
             CreateBox(detailsRoot, "Window_Mullion_H1", new Vector3(winX, 1.25f, 1.97f), new Vector3(1.10f, 0.035f, 0.06f), matTrim);
             CreateBox(detailsRoot, "Window_Mullion_H2", new Vector3(winX, 1.58f, 1.97f), new Vector3(1.10f, 0.035f, 0.06f), matTrim);
             CreateBox(detailsRoot, "Window_Mullion_H3", new Vector3(winX, 1.91f, 1.97f), new Vector3(1.10f, 0.035f, 0.06f), matTrim);
+
+            // ==========================================
+            // 9. MOBILIARIO: MESA REDONDA RÚSTICA Y SILLA ORNADA
+            // ==========================================
+            GameObject furnitureRoot = new GameObject("Furniture");
+            furnitureRoot.transform.SetParent(root.transform, false);
+
+            // A) Mesa Redonda Rústica
+            string tablePath = $"{PROPS_PATH}/Table/Meshy_AI_Rustic_Round_Wooden_T_0915165031_texture.obj";
+            GameObject tablePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tablePath);
+            if (tablePrefab != null)
+            {
+                GameObject tableInst = Object.Instantiate(tablePrefab, furnitureRoot.transform);
+                tableInst.name = "Rustic_Round_Table";
+                float st = 0.74f; // Escala proporcional (altura mesa ~0.71m, diámetro ~1.40m)
+                tableInst.transform.localScale = new Vector3(st, st, st);
+                float yTable = 0.478407f * st;
+                tableInst.transform.localPosition = new Vector3(0.35f, yTable, 0.65f);
+                tableInst.transform.localRotation = Quaternion.identity;
+
+                Renderer[] rListTable = tableInst.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in rListTable)
+                {
+                    if (matTable != null) r.sharedMaterial = matTable;
+                }
+
+                BoxCollider tableCol = tableInst.AddComponent<BoxCollider>();
+                tableCol.size = new Vector3(1.90f, 0.96f, 1.90f);
+                tableCol.center = Vector3.zero;
+            }
+
+            // B) Silla Ornada (colocada junto a la mesa, orientada hacia ella)
+            string chairPath = $"{PROPS_PATH}/Chair/Meshy_AI_Ornate_Wooden_Chair_0915164651_texture.obj";
+            GameObject chairPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(chairPath);
+            if (chairPrefab != null)
+            {
+                GameObject chairInst = Object.Instantiate(chairPrefab, furnitureRoot.transform);
+                chairInst.name = "Ornate_Wooden_Chair";
+                float sc = 0.58f; // Altura silla ~1.05m
+                chairInst.transform.localScale = new Vector3(sc, sc, sc);
+                float yLegs = 0.9514f * sc;
+                chairInst.transform.localPosition = new Vector3(0.92f, yLegs, 0.65f);
+                chairInst.transform.localRotation = Quaternion.Euler(0.0f, -75.0f, 0.0f); // Mirando hacia la mesa
+
+                Renderer[] rListChair = chairInst.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in rListChair)
+                {
+                    if (matChair != null) r.sharedMaterial = matChair;
+                }
+
+                BoxCollider chairCol = chairInst.AddComponent<BoxCollider>();
+                chairCol.size = new Vector3(0.85f, 1.90f, 0.95f);
+                chairCol.center = Vector3.zero;
+            }
 
             return root;
         }
@@ -312,7 +380,6 @@ namespace StylizedRoom
             GameObject lightGroup = new GameObject("Lighting");
             lightGroup.transform.SetParent(room.transform, false);
 
-            // Luz de la luna atravesando la ventana
             GameObject moonLightObj = new GameObject("Moonlight_Directional");
             moonLightObj.transform.SetParent(lightGroup.transform, false);
             moonLightObj.transform.position = new Vector3(2.0f, 4.0f, 3.8f);
@@ -325,7 +392,6 @@ namespace StylizedRoom
             moonLight.shadows = LightShadows.Soft;
             moonLight.shadowStrength = 0.75f;
 
-            // Luz suave ambiental interior
             GameObject fillLightObj = new GameObject("Interior_Warm_Fill");
             fillLightObj.transform.SetParent(lightGroup.transform, false);
             fillLightObj.transform.position = new Vector3(0.0f, 2.2f, 0.0f);
@@ -340,7 +406,6 @@ namespace StylizedRoom
 
         private static void SetupFirstPersonPlayer(GameObject room)
         {
-            // Desactivar cualquier cámara suelta que compita
             Camera[] oldCams = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
             foreach (var c in oldCams)
             {
@@ -350,22 +415,19 @@ namespace StylizedRoom
                 }
             }
 
-            // Crear o reutilizar Player_FPV
             GameObject oldPlayer = GameObject.Find("Player_FPV");
             if (oldPlayer != null) DestroyImmediate(oldPlayer);
 
             GameObject player = new GameObject("Player_FPV");
             player.transform.position = new Vector3(0.0f, 0.05f, -0.6f);
-            player.transform.rotation = Quaternion.Euler(0.0f, 28.0f, 0.0f); // Mirando hacia la ventana y la luna
+            player.transform.rotation = Quaternion.Euler(0.0f, 28.0f, 0.0f);
 
-            // Character Controller
             CharacterController cc = player.AddComponent<CharacterController>();
             cc.height = 1.75f;
             cc.radius = 0.30f;
             cc.center = new Vector3(0.0f, 0.875f, 0.0f);
             cc.stepOffset = 0.2f;
 
-            // Cámara del jugador a la altura de los ojos
             GameObject camObj = new GameObject("FirstPersonCamera");
             camObj.transform.SetParent(player.transform, false);
             camObj.transform.localPosition = new Vector3(0.0f, 1.65f, 0.0f);
@@ -384,7 +446,6 @@ namespace StylizedRoom
                 camObj.AddComponent<AudioListener>();
             }
 
-            // Agregar script FirstPersonController
             FirstPersonController fpc = player.AddComponent<FirstPersonController>();
             fpc.cameraTransform = camObj.transform;
             fpc.walkSpeed = 2.4f;
@@ -392,7 +453,7 @@ namespace StylizedRoom
             fpc.mouseSensitivity = 0.12f;
 
             Selection.activeGameObject = player;
-            Debug.Log("[StylizedRoom] Player_FPV creado exitosamente con CharacterController y WASD.");
+            Debug.Log("[StylizedRoom] Player_FPV, Mesa y Silla integrados correctamente.");
         }
     }
 }

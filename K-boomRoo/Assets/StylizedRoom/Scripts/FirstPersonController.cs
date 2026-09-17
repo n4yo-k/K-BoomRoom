@@ -43,6 +43,8 @@ namespace StylizedRoom
 
         private void HandleLook()
         {
+            if (Cursor.lockState != CursorLockMode.Locked) return;
+
             Vector2 lookDelta = Vector2.zero;
 
 #if ENABLE_INPUT_SYSTEM
