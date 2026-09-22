@@ -71,6 +71,7 @@ namespace DefusalGame.Bomb
         {
             if (audioSource != null && explosionClip != null)
             {
+                audioSource.spatialBlend = 0.0f; // 2D para que resuene fuerte sin importar la distancia
                 audioSource.PlayOneShot(explosionClip, 1.0f);
             }
         }

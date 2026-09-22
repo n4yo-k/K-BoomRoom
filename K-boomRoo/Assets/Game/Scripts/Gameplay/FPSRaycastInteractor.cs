@@ -35,7 +35,7 @@ namespace DefusalGame.Gameplay
             if (playerCam == null) return;
 
             // Comprobar si hay alguna hoja abierta inspeccionándose
-            var activeDossier = Object.FindFirstObjectByType<MissionDossier>();
+            var activeDossier = Object.FindAnyObjectByType<MissionDossier>();
             if (activeDossier != null && activeDossier.isInspecting)
             {
                 return;
@@ -103,7 +103,7 @@ namespace DefusalGame.Gameplay
 
         void OnGUI()
         {
-            var activeDossier = Object.FindFirstObjectByType<MissionDossier>();
+            var activeDossier = Object.FindAnyObjectByType<MissionDossier>();
             if (activeDossier != null && activeDossier.isInspecting)
             {
                 return;
