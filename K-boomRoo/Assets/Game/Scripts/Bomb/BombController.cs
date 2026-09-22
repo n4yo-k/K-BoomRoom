@@ -34,6 +34,9 @@ namespace DefusalGame.Bomb
         [Header("Audio")]
         public BombAudioSynthesizer audioSynth;
 
+        [Header("Detonación")]
+        public string explosionReason = "";
+
         private float lastTickSecond = -1f;
         private float redLightBlinkTimer = 0f;
 
@@ -44,14 +47,24 @@ namespace DefusalGame.Bomb
             if (config != null)
             {
                 timeRemaining = config.timeLimitSeconds;
+                if (config.linkedClues != null)
+                {
+                    foreach (var c in config.linkedClues)
+                    {
+                        if (c != null) c.isCollected = false;
+                    }
+                }
             }
             else
             {
                 timeRemaining = 300f;
             }
 
+            DefusalGameStateManager.ResetState(timeRemaining, (config != null) ? config.bombId : "BOMB_CHAMBER_01");
+
             currentState = BombState.Armed;
             enteredCode = "";
+            explosionReason = "";
             UpdateDisplays();
 
             if (activeRedLight != null) activeRedLight.enabled = true;
@@ -67,7 +80,7 @@ namespace DefusalGame.Bomb
             if (timeRemaining <= 0f)
             {
                 timeRemaining = 0f;
-                TriggerExplosion();
+                TriggerExplosion("¡Se agotó el tiempo límite!");
                 return;
             }
 
@@ -129,14 +142,11 @@ namespace DefusalGame.Bomb
             }
             else
             {
-                // Código Incorrecto -> PENALIZACIÓN
-                float penalty = (config != null) ? config.penaltySecondsOnFail : 30f;
-                timeRemaining = Mathf.Max(1f, timeRemaining - penalty);
-
-                if (audioSynth != null) audioSynth.PlayError();
-                if (statusText != null) statusText.text = $"<color=red>ERROR! -{penalty:0}s</color>";
-
-                enteredCode = "";
+                // Código Erróneo -> EXPLOSIÓN DIRECTA (El usuario solicitó: si se equivoca en algo, quiero que explote)
+                string inputStr = string.IsNullOrEmpty(enteredCode) ? "Vacío" : enteredCode;
+                Debug.Log($"[BombController] Código incorrecto ingresado: '{inputStr}'. ¡EXPLOSIÓN INMEDIATA!");
+                if (statusText != null) statusText.text = "<color=red>¡CÓDIGO ERRÓNEO!</color>";
+                TriggerExplosion($"Código incorrecto ingresado: '{inputStr}'");
             }
         }
 
@@ -158,18 +168,22 @@ namespace DefusalGame.Bomb
             Debug.Log("[BombController] ¡Bomba desactivada con éxito!");
         }
 
-        private void TriggerExplosion()
+        public void TriggerExplosion(string reason = "Se agotó el tiempo límite")
         {
+            if (currentState == BombState.Exploded) return;
+
             currentState = BombState.Exploded;
+            explosionReason = reason;
+
             if (audioSynth != null) audioSynth.PlayExplosion();
 
             if (activeRedLight != null) activeRedLight.enabled = true;
             if (defusedGreenLight != null) defusedGreenLight.enabled = false;
 
-            if (statusText != null) statusText.text = "<color=red>DETONACIÓN</color>";
+            if (statusText != null) statusText.text = "<color=red>¡DETONACIÓN!</color>";
             if (codeText != null) codeText.text = "<color=red>0000</color>";
 
-            Debug.Log("[BombController] ¡La bomba ha detonado!");
+            Debug.Log($"[BombController] ¡La bomba ha detonado! Causa: {reason}");
         }
 
         private void UpdateDisplays()

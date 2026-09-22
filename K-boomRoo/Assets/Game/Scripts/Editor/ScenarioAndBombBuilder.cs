@@ -849,6 +849,13 @@ namespace DefusalGame.Editor
             fpc.runSpeed = 4.2f;
             fpc.mouseSensitivity = 0.12f;
 
+            PlayerHUD hud = player.AddComponent<PlayerHUD>();
+            hud.playerCamera = cam;
+            hud.clue1 = AssetDatabase.LoadAssetAtPath<ClueData>($"{GAME_DATA_PATH}/Clue_01_DeskDrawer.asset");
+            hud.clue2 = AssetDatabase.LoadAssetAtPath<ClueData>($"{GAME_DATA_PATH}/Clue_02_Corkboard.asset");
+            hud.clue3 = AssetDatabase.LoadAssetAtPath<ClueData>($"{GAME_DATA_PATH}/Clue_03_Bookshelf.asset");
+            hud.clue4 = AssetDatabase.LoadAssetAtPath<ClueData>($"{GAME_DATA_PATH}/Clue_04_Toolbox.asset");
+
             Selection.activeGameObject = player;
         }
 
