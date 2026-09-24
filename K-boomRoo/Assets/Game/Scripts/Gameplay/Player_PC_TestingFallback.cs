@@ -72,36 +72,39 @@ namespace DefusalGame.Gameplay
 
             try
             {
-#if UNITY_2020_1_OR_NEWER
-                hasVRDevice = UnityEngine.XR.XRSettings.isDeviceActive || 
+                var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+                hasVRDevice = UnityEngine.XR.XRSettings.isDeviceActive || head.isValid ||
                              (UnityEngine.XR.Management.XRGeneralSettings.Instance != null &&
                               UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager != null &&
                               UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager.activeLoader != null);
-#else
-                hasVRDevice = UnityEngine.XR.XRDevice.isPresent;
-#endif
             }
             catch
             {
                 hasVRDevice = false;
             }
 
-            // Si hay un XR Origin activo en la escena con cámara activa, asumimos que VR toma prioridad
+            // Si hay un XR Origin activo en la escena o un visor VR conectado, VR toma la prioridad total
             var xrCameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             foreach (var c in xrCameras)
             {
-                if (c != playerCamera && (c.name.Contains("XR") || c.name.Contains("Main Camera") || c.transform.parent?.name.Contains("XR") == true))
+                if (c != playerCamera && (c.name.Contains("XR") || c.transform.parent?.name.Contains("XR") == true || c.name.Contains("Main Camera")))
                 {
-                    if (hasVRDevice)
+                    if (hasVRDevice || Application.isPlaying)
                     {
-                        // Desactivar fallback PC para evitar cámaras duplicadas en VR
+                        // Si hay un visor VR o rig XR en la escena, desactivar fallback PC
                         DeactivatePCFallback();
                         return;
                     }
                 }
             }
 
-            // Modo PC Editor activo
+            if (hasVRDevice)
+            {
+                DeactivatePCFallback();
+                return;
+            }
+
+            // Modo PC Editor activo sólo si no hay visor VR
             ActivatePCMode();
         }
 

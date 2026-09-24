@@ -818,18 +818,43 @@ namespace DefusalGame.Editor
             GameObject oldPlayer = GameObject.Find("Player_FPV");
             if (oldPlayer != null) DestroyImmediate(oldPlayer);
 
+            int playerLayer = LayerMask.NameToLayer("Player");
+            if (playerLayer < 0) playerLayer = 0;
+
+            // ── Rig de VR (XR Origin) ─────────────────────────────────────────────
+            string xrPrefabPath = "Assets/Samples/XR Interaction Toolkit/3.5.1/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
+            GameObject xrPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(xrPrefabPath);
+            if (xrPrefab != null)
+            {
+                GameObject xrRig = (GameObject)PrefabUtility.InstantiatePrefab(xrPrefab);
+                xrRig.name = "XR Origin (XR Rig)";
+                xrRig.transform.position = new Vector3(0f, 0.05f, -0.75f);
+                xrRig.layer = playerLayer;
+
+                CharacterController xrCC = xrRig.GetComponent<CharacterController>();
+                if (xrCC == null)
+                {
+                    xrCC = xrRig.AddComponent<CharacterController>();
+                    xrCC.height = 1.8f; xrCC.radius = 0.35f;
+                    xrCC.center = new Vector3(0f, 0.9f, 0f);
+                }
+
+                AntigravityPlayerController agXR = xrRig.GetComponent<AntigravityPlayerController>();
+                if (agXR == null) agXR = xrRig.AddComponent<AntigravityPlayerController>();
+                Camera xrCam = xrRig.GetComponentInChildren<Camera>();
+                if (xrCam != null) agXR.headTransform = xrCam.transform;
+            }
+
+            // ── Rig de PC Fallback ────────────────────────────────────────────────
             GameObject player = new GameObject("Player_FPV");
-            // Colocado a 1 metro frente a la mesa en la Sala 1, mirando directamente a la bomba y la hoja de misión
             player.transform.position = new Vector3(0f, 0.05f, -0.75f);
             player.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+            player.layer = playerLayer;
 
             CharacterController cc = player.AddComponent<CharacterController>();
             cc.height = 1.75f;
             cc.radius = 0.25f;
             cc.center = new Vector3(0f, 0.875f, 0f);
-            cc.stepOffset = 0.35f;
-            cc.skinWidth = 0.03f;
-            cc.minMoveDistance = 0.001f;
 
             GameObject camObj = new GameObject("FirstPersonCamera");
             camObj.transform.SetParent(player.transform, false);
@@ -843,11 +868,11 @@ namespace DefusalGame.Editor
             camObj.AddComponent<AudioListener>();
             camObj.AddComponent<FPSRaycastInteractor>();
 
-            FirstPersonController fpc = player.AddComponent<FirstPersonController>();
-            fpc.cameraTransform = camObj.transform;
-            fpc.walkSpeed = 2.4f;
-            fpc.runSpeed = 4.2f;
-            fpc.mouseSensitivity = 0.12f;
+            AntigravityPlayerController agPC = player.AddComponent<AntigravityPlayerController>();
+            agPC.headTransform = camObj.transform;
+
+            Player_PC_TestingFallback pcScript = player.AddComponent<Player_PC_TestingFallback>();
+            pcScript.playerCamera = cam;
 
             PlayerHUD hud = player.AddComponent<PlayerHUD>();
             hud.playerCamera = cam;

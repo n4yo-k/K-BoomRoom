@@ -47,12 +47,29 @@ namespace DefusalGame.VR
 
         private bool CheckVRPresence()
         {
-            var displays = new List<XRDisplaySubsystem>();
-            SubsystemManager.GetSubsystems(displays);
-            foreach (var d in displays)
+            try
             {
-                if (d.running) return true;
+                if (UnityEngine.XR.XRSettings.isDeviceActive) return true;
+
+                var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+                if (head.isValid) return true;
+
+                var displays = new List<XRDisplaySubsystem>();
+                SubsystemManager.GetSubsystems(displays);
+                foreach (var d in displays)
+                {
+                    if (d.running) return true;
+                }
+
+                if (UnityEngine.XR.Management.XRGeneralSettings.Instance != null &&
+                    UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager != null &&
+                    UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager.activeLoader != null)
+                {
+                    return true;
+                }
             }
+            catch { }
+
             return false;
         }
     }

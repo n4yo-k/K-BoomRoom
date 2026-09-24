@@ -105,32 +105,61 @@ namespace DefusalGame.Gameplay
 
         private void HandleRotation()
         {
-            // Si no estamos en VR y el cursor está bloqueado, controlar orientación con ratón
-            if (!isVRMode && Cursor.lockState == CursorLockMode.Locked)
-            {
-                Vector2 lookDelta = Vector2.zero;
+            float lookX = 0f;
+            float lookY = 0f;
 
+            // 1. Obtener giro con Mando VR Derecho (Right Thumbstick)
+            var rightHandDevice = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.RightHand);
+            if (rightHandDevice.isValid && rightHandDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis, out Vector2 rightStick))
+            {
+                if (Mathf.Abs(rightStick.x) > 0.15f) lookX = rightStick.x * 12f;
+            }
+
+#if ENABLE_INPUT_SYSTEM
+            if (Mathf.Abs(lookX) < 0.01f)
+            {
+                foreach (var device in UnityEngine.InputSystem.InputSystem.devices)
+                {
+                    if (device is UnityEngine.InputSystem.XR.XRController && (device.name.IndexOf("right", System.StringComparison.OrdinalIgnoreCase) >= 0 || device.name.IndexOf("headset", System.StringComparison.OrdinalIgnoreCase) < 0))
+                    {
+                        var thumb = device.GetChildControl<UnityEngine.InputSystem.Controls.Vector2Control>("thumbstick");
+                        if (thumb != null && Mathf.Abs(thumb.ReadValue().x) > 0.15f)
+                            lookX = thumb.ReadValue().x * 12f;
+                    }
+                }
+            }
+#endif
+
+            // 2. Si no es VR y el cursor está bloqueado, controlar con ratón
+            if (Mathf.Abs(lookX) < 0.01f && !isVRMode && Cursor.lockState == CursorLockMode.Locked)
+            {
 #if ENABLE_INPUT_SYSTEM
                 if (Mouse.current != null)
                 {
-                    lookDelta = Mouse.current.delta.ReadValue() * mouseSensitivity;
+                    Vector2 delta = Mouse.current.delta.ReadValue() * mouseSensitivity;
+                    lookX = delta.x;
+                    lookY = delta.y;
                 }
 #else
                 try
                 {
-                    lookDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * (mouseSensitivity * 15f);
+                    lookX = Input.GetAxis("Mouse X") * (mouseSensitivity * 15f);
+                    lookY = Input.GetAxis("Mouse Y") * (mouseSensitivity * 15f);
                 }
                 catch { }
 #endif
+            }
 
-                transform.Rotate(Vector3.up * lookDelta.x);
+            if (Mathf.Abs(lookX) > 0.001f)
+            {
+                transform.Rotate(Vector3.up * (lookX * rotationSpeed * Time.deltaTime));
+            }
 
-                pitch -= lookDelta.y;
+            if (Mathf.Abs(lookY) > 0.001f && headTransform != null)
+            {
+                pitch -= lookY;
                 pitch = Mathf.Clamp(pitch, -85f, 85f);
-                if (headTransform != null)
-                {
-                    headTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
-                }
+                headTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
             }
         }
 
@@ -139,7 +168,40 @@ namespace DefusalGame.Gameplay
             Vector3 inputThrust = Vector3.zero;
             bool isBoosted = false;
 
-            // 1. Obtener entradas de teclado / gamepad
+            // 1. Obtener traslación con Mando VR Izquierdo (Left Thumbstick)
+            var leftHandDevice = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.LeftHand);
+            if (leftHandDevice.isValid && leftHandDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis, out Vector2 leftStick))
+            {
+                if (leftStick.sqrMagnitude > 0.04f)
+                {
+                    inputThrust.x += leftStick.x;
+                    inputThrust.z += leftStick.y;
+                }
+            }
+
+#if ENABLE_INPUT_SYSTEM
+            if (inputThrust.sqrMagnitude < 0.01f)
+            {
+                foreach (var device in UnityEngine.InputSystem.InputSystem.devices)
+                {
+                    if (device is UnityEngine.InputSystem.XR.XRController && device.name.IndexOf("left", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        var thumb = device.GetChildControl<UnityEngine.InputSystem.Controls.Vector2Control>("thumbstick");
+                        if (thumb != null)
+                        {
+                            Vector2 val = thumb.ReadValue();
+                            if (val.sqrMagnitude > 0.04f)
+                            {
+                                inputThrust.x += val.x;
+                                inputThrust.z += val.y;
+                            }
+                        }
+                    }
+                }
+            }
+#endif
+
+            // 2. Obtener entradas de teclado / gamepad PC
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current != null)
             {
@@ -166,11 +228,11 @@ namespace DefusalGame.Gameplay
 #else
             try
             {
-                inputThrust.x = Input.GetAxisRaw("Horizontal");
-                inputThrust.z = Input.GetAxisRaw("Vertical");
+                inputThrust.x += Input.GetAxisRaw("Horizontal");
+                inputThrust.z += Input.GetAxisRaw("Vertical");
                 if (Input.GetKey(KeyCode.Space)) inputThrust.y += 1f;
                 if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl)) inputThrust.y -= 1f;
-                isBoosted = Input.GetKey(KeyCode.LeftShift);
+                isBoosted = isBoosted || Input.GetKey(KeyCode.LeftShift);
             }
             catch { }
 #endif
