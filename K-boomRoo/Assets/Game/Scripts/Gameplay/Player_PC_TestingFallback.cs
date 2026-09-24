@@ -139,6 +139,26 @@ namespace DefusalGame.Gameplay
         {
             if (isVRActive) return;
 
+            // Soporte de tecla G para alternar ventana de guardado
+            bool gPressed = false;
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame) gPressed = true;
+#else
+            try { if (Input.GetKeyDown(KeyCode.G)) gPressed = true; } catch { }
+#endif
+            if (gPressed && Room2UIManager.Instance != null)
+            {
+                Room2UIManager.Instance.ToggleSavePopup();
+                return;
+            }
+
+            // Si la ventana emergente de guardado está abierta, suspender movimiento y rotación de cámara
+            if (Room2UIManager.Instance != null && Room2UIManager.Instance.isSavePopupOpen)
+            {
+                hoverInfoText = "";
+                return;
+            }
+
             HandleCursorToggle();
             HandleInputShortcuts();
             HandleMouseLook();
@@ -323,8 +343,13 @@ namespace DefusalGame.Gameplay
                 }
                 else if (hoveredNote != null)
                 {
-                    hoverInfoText = $"[CLICK / E] Inspeccionar: {hoveredNote.clueData?.clueName ?? "Nota"}";
+                    hoverInfoText = "[E / Click] Inspeccionar...";
                 }
+            }
+
+            if (Room2UIManager.Instance != null)
+            {
+                Room2UIManager.Instance.currentHoverPrompt = hoverInfoText;
             }
 
             bool trigger = false;

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Room2_Clue_03
   m_EditorClassIdentifier: Assembly-CSharp::DefusalGame.Data.ClueData
   clueId: CLUE_ROOM2_03
-  clueName: "Nota Marcada en los Libros"
-  description: "Entre las paginas de los tomos antiguos: 'EL TERCER DIGITO ES EL 9'."
+  clueName: Nota Marcada en los Libros
+  description: "Marcap\xE1ginas entre los tomos: 'EL TERCER D\xCDGITO ES EL 9'."
   revealedValue: 9
   sequenceIndex: 2
-  hintLocation: "Pila de Libros en la Mesa"
+  hintLocation: Pila de Libros Ornamentados

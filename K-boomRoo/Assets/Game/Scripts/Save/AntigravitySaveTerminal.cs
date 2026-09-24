@@ -4,6 +4,7 @@ using UnityEngine;
 using TMPro;
 using DefusalGame.Data;
 using DefusalGame.Bomb;
+using DefusalGame.Gameplay;
 
 namespace DefusalGame.Save
 {
@@ -73,13 +74,17 @@ namespace DefusalGame.Save
 
         public void OnSaveButtonPressed()
         {
-            if (GameSaveManager.Instance != null)
+            if (Room2UIManager.Instance != null)
+            {
+                Room2UIManager.Instance.OpenSavePopup();
+            }
+            else if (GameSaveManager.Instance != null)
             {
                 GameSaveManager.Instance.SaveGame();
             }
             else
             {
-                Debug.LogWarning("[AntigravitySaveTerminal] GameSaveManager no encontrado en escena.");
+                Debug.LogWarning("[AntigravitySaveTerminal] GameSaveManager / Room2UIManager no encontrado en escena.");
             }
         }
 

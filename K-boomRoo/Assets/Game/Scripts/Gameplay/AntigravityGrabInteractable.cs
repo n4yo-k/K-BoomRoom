@@ -110,18 +110,7 @@ namespace DefusalGame.Gameplay
         /// </summary>
         public void OnTouchedByHand(AntigravityHandPhysics hand)
         {
-            if (vrNoteComponent != null)
-            {
-                vrNoteComponent.OnNoteInteracted();
-                vrNoteComponent.TogglePopup();
-            }
-
-            // Aplicar un pequeño impulso físico de flotación al tocarla
-            if (rb != null && !isCurrentlyHeld)
-            {
-                Vector3 touchImpulse = (transform.position - hand.transform.position).normalized * 0.4f + Vector3.up * 0.2f;
-                rb.AddForce(touchImpulse, ForceMode.Impulse);
-            }
+            // Las notas requieren interacción explícita (clic o E), no recolección automática al pasar cerca.
         }
 
         // Interacción directa en PC / Editor
@@ -131,13 +120,6 @@ namespace DefusalGame.Gameplay
             {
                 vrNoteComponent.OnNoteInteracted();
                 vrNoteComponent.TogglePopup();
-            }
-
-            if (rb != null && floatInZeroGravity)
-            {
-                rb.useGravity = false;
-                // Pequeña propulsión flotante al hacer clic
-                rb.AddForce(Vector3.up * 0.35f, ForceMode.Impulse);
             }
         }
     }

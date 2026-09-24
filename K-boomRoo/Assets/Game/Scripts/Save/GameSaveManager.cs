@@ -10,6 +10,19 @@ using DefusalGame.Gameplay;
 namespace DefusalGame.Save
 {
     /// <summary>
+    /// Estado individual de cada una de las 4 notas para serialización JSON.
+    /// </summary>
+    [Serializable]
+    public class NoteSaveState
+    {
+        public string clueId = "";
+        public string clueName = "";
+        public bool isFound = false;
+        public string revealedDigit = "";
+        public int sequenceIndex = 0;
+    }
+
+    /// <summary>
     /// Estructura de datos serializable a JSON que contiene toda la información de la partida.
     /// </summary>
     [Serializable]
@@ -18,8 +31,13 @@ namespace DefusalGame.Save
         [Header("Progreso y Escena")]
         public string currentScene = "Room2";
         public string levelName = "Room2_EscapeRoom";
-        public int levelProgress = 1;
+        public int levelProgress = 2;
         public string saveTimestamp = "";
+
+        [Header("Posición del Jugador (X, Y, Z)")]
+        public float playerPosX = 0f;
+        public float playerPosY = 0.05f;
+        public float playerPosZ = -1.25f;
 
         [Header("Estado de la Bomba")]
         public bool isBombDefused = false;
@@ -27,8 +45,9 @@ namespace DefusalGame.Save
         public float timeRemaining = 300f;
         public string lastEnteredCode = "";
 
-        [Header("Estado de Notas / Pistas")]
+        [Header("Estado de las 4 Notas / Pistas")]
         public List<string> collectedClueIds = new List<string>();
+        public List<NoteSaveState> notesState = new List<NoteSaveState>();
 
         [Header("Puntuación")]
         public int score = 0;
@@ -120,7 +139,29 @@ namespace DefusalGame.Save
         }
 
         /// <summary>
+        /// Localiza automáticamente el transform del jugador activo (VR u ordenador).
+        /// </summary>
+        public Transform FindPlayerTransform()
+        {
+            var pc = UnityEngine.Object.FindFirstObjectByType<Player_PC_TestingFallback>();
+            if (pc != null && pc.isActiveAndEnabled) return pc.transform;
+
+            var xr = GameObject.Find("XR Origin (XR Rig)");
+            if (xr != null && xr.activeInHierarchy) return xr.transform;
+
+            if (pc != null) return pc.transform;
+
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                return cam.transform.parent != null ? cam.transform.parent : cam.transform;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Guarda el estado actual de la partida en formato JSON en disco y PlayerPrefs.
+        /// Serializa: Nombre de Escena (Room2), Tiempo de Bomba, Estado de las 4 Notas y Posición XYZ del jugador.
         /// </summary>
         [ContextMenu("Guardar Partida (SaveGame)")]
         public void SaveGame()
@@ -132,7 +173,16 @@ namespace DefusalGame.Save
             currentData.levelName = "EscapeRoom_Room2";
             currentData.saveTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-            // 2. Recopilar datos de la bomba
+            // 2. Recopilar posición del jugador en X, Y, Z
+            Transform playerT = FindPlayerTransform();
+            if (playerT != null)
+            {
+                currentData.playerPosX = playerT.position.x;
+                currentData.playerPosY = playerT.position.y;
+                currentData.playerPosZ = playerT.position.z;
+            }
+
+            // 3. Recopilar datos de la bomba
             if (bombController != null)
             {
                 currentData.timeRemaining = bombController.timeRemaining;
@@ -141,33 +191,51 @@ namespace DefusalGame.Save
                 currentData.lastEnteredCode = bombController.enteredCode;
             }
 
-            // 3. Recopilar notas/pistas encontradas desde DefusalGameStateManager
+            // 4. Recopilar estado de las 4 notas / pistas (cuáles encontradas y dígitos revelados)
             currentData.collectedClueIds = new List<string>(DefusalGameStateManager.CurrentState.collectedClueIds);
+            currentData.notesState.Clear();
 
-            // 4. Calcular puntaje (Tiempo restante * 10 + 500 por cada nota)
+            var allVrNotes = UnityEngine.Object.FindObjectsByType<VRNoteInteractable>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var note in allVrNotes)
+            {
+                if (note != null && note.clueData != null)
+                {
+                    bool isFound = note.clueData.isCollected || currentData.collectedClueIds.Contains(note.clueData.clueId);
+                    currentData.notesState.Add(new NoteSaveState
+                    {
+                        clueId = note.clueData.clueId,
+                        clueName = note.clueData.clueName,
+                        isFound = isFound,
+                        revealedDigit = note.clueData.revealedValue,
+                        sequenceIndex = note.clueData.sequenceIndex
+                    });
+                }
+            }
+
+            // 5. Calcular puntaje (Tiempo restante * 10 + 500 por cada nota)
             int clueBonus = currentData.collectedClueIds.Count * 500;
             int timeBonus = Mathf.Max(0, Mathf.FloorToInt(currentData.timeRemaining * 10f));
             currentData.score = timeBonus + clueBonus + (currentData.isBombDefused ? 2000 : 0);
 
-            // 5. Serializar a JSON
+            // 6. Serializar a JSON
             string json = JsonUtility.ToJson(currentData, true);
 
-            // 6. Guardar en disco persistente (Local JSON)
+            // 7. Guardar en disco persistente (Local JSON)
             try
             {
                 File.WriteAllText(SaveFilePath, json);
-                Debug.Log($"[GameSaveManager] Partida guardada con éxito en archivo: {SaveFilePath}");
+                Debug.Log($"[GameSaveManager] Partida guardada con éxito en JSON: {SaveFilePath}\nPosición: ({currentData.playerPosX:F2}, {currentData.playerPosY:F2}, {currentData.playerPosZ:F2}), Tiempo: {currentData.timeRemaining:F1}s, Notas: {currentData.notesState.Count}");
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[GameSaveManager] Error al escribir archivo de guardado: {ex.Message}");
             }
 
-            // 7. Guardar en PlayerPrefs (Respaldo redundante para máxima compatibilidad VR/Mobile)
+            // 8. Guardar en PlayerPrefs (Respaldo redundante para máxima compatibilidad)
             PlayerPrefs.SetString(PLAYER_PREFS_KEY, json);
             PlayerPrefs.Save();
 
-            // 8. Notificar evento
+            // 9. Notificar evento a la UI para mostrar notificación temporal
             OnGameSaved?.Invoke(currentData);
         }
 
@@ -220,7 +288,17 @@ namespace DefusalGame.Save
                 return false;
             }
 
-            // 4. Restaurar estado de la bomba
+            // 4. Restaurar posición del jugador (X, Y, Z)
+            Transform playerT = FindPlayerTransform();
+            if (playerT != null)
+            {
+                CharacterController cc = playerT.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+                playerT.position = new Vector3(currentData.playerPosX, currentData.playerPosY, currentData.playerPosZ);
+                if (cc != null) cc.enabled = true;
+            }
+
+            // 5. Restaurar estado de la bomba
             if (bombController != null)
             {
                 bombController.timeRemaining = Mathf.Max(1f, currentData.timeRemaining);
@@ -244,21 +322,31 @@ namespace DefusalGame.Save
                 }
             }
 
-            // 5. Restaurar estado de las notas en DefusalGameStateManager
+            // 6. Restaurar estado de las notas en DefusalGameStateManager
             DefusalGameStateManager.CurrentState.collectedClueIds = new List<string>(currentData.collectedClueIds);
 
-            // 6. Restaurar pistas en los componentes ClueInteractable de la escena
+            // 7. Restaurar pistas en los componentes VRNoteInteractable y ClueInteractable
+            var allNotes = UnityEngine.Object.FindObjectsByType<VRNoteInteractable>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var note in allNotes)
+            {
+                if (note != null && note.clueData != null)
+                {
+                    bool wasFound = currentData.collectedClueIds.Contains(note.clueData.clueId);
+                    note.clueData.isCollected = wasFound;
+                }
+            }
+
             var allClues = UnityEngine.Object.FindObjectsByType<ClueInteractable>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var clue in allClues)
             {
-                if (clue.clueData != null)
+                if (clue != null && clue.clueData != null)
                 {
                     bool wasFound = currentData.collectedClueIds.Contains(clue.clueData.clueId);
                     clue.clueData.isCollected = wasFound;
                 }
             }
 
-            Debug.Log($"[GameSaveManager] ¡Partida cargada con éxito! Nivel: {currentData.currentScene}, Notas encontradas: {currentData.collectedClueIds.Count}, Tiempo restante: {currentData.timeRemaining:F1}s");
+            Debug.Log($"[GameSaveManager] ¡Partida cargada con éxito! Nivel: {currentData.currentScene}, Notas encontradas: {currentData.collectedClueIds.Count}, Tiempo restante: {currentData.timeRemaining:F1}s, Posición: ({currentData.playerPosX:F2}, {currentData.playerPosY:F2}, {currentData.playerPosZ:F2})");
 
             // 7. Notificar evento
             OnGameLoaded?.Invoke(currentData);

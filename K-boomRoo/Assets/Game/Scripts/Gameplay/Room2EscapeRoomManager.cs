@@ -207,12 +207,12 @@ namespace DefusalGame.Gameplay
                 $"<align=center><size=130%><b>ESCAPE ROOM VR - SALA 2</b></size>\n" +
                 $"<color={statusColor}><size=95%><b>ESTADO: {bombStatus}</b></size></color></align>\n" +
                 $"----------------------------------------\n" +
-                $"<b>OBJETIVO:</b> Encuentra las 3 notas ocultas en la habitación para obtener los 3 dígitos de desactivación.\n\n" +
-                $"<b>PISTAS REUNIDAS ({collectedCount}/3):</b>\n" +
+                $"<b>OBJETIVO:</b> Encuentra las 4 notas ocultas en la habitación para obtener los 4 dígitos de desactivación.\n\n" +
+                $"<b>PISTAS REUNIDAS ({collectedCount}/4):</b>\n" +
                 $"{notesInfo}\n" +
                 $"----------------------------------------\n" +
-                $"<i>Introduce los 3 dígitos en el teclado de la bomba y presiona <b>ENT</b>.\n" +
-                $"Guardar: <b>F5</b> | Cargar: <b>F9</b> | Reiniciar: <b>F12</b></i>";
+                $"<i>Introduce los 4 dígitos en el teclado de la bomba y presiona <b>ENT</b>.\n" +
+                $"Guardar: Tecla <b>G</b> o Panel 3D | Cargar: <b>F9</b> | Reiniciar: <b>R</b></i>";
         }
 
         private void OnSaveLoaded(GameSaveData data)

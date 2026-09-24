@@ -13,12 +13,13 @@ MonoBehaviour:
   m_Name: Room2_BombConfig
   m_EditorClassIdentifier: Assembly-CSharp::DefusalGame.Data.BombConfigData
   bombId: BOMB_ROOM2_01
-  bombName: "Bomba Escape Room - 3 Digitos"
+  bombName: "Bomba Escape Room - 4 D\xEDgitos"
   timeLimitSeconds: 300
   penaltySecondsOnFail: 30
-  targetSequence: 739
-  requiredCluesCount: 3
+  targetSequence: 7395
+  requiredCluesCount: 4
   linkedClues:
   - {fileID: 11400000, guid: 42636ed70b344c339c73cb89a0701f08, type: 2}
   - {fileID: 11400000, guid: 1bc4629a7bf8426fbf57e99fd3fdec99, type: 2}
   - {fileID: 11400000, guid: e104515df1794bb68c053ae7d44c55ed, type: 2}
+  - {fileID: 11400000, guid: b5acd0fc0b7743b58cea8621b9f913e8, type: 2}

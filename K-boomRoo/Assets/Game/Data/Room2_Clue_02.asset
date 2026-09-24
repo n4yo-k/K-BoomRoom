@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Room2_Clue_02
   m_EditorClassIdentifier: Assembly-CSharp::DefusalGame.Data.ClueData
   clueId: CLUE_ROOM2_02
-  clueName: "Nota Oculta tras el Retrato"
-  description: "Papel escondido junto al marco: 'EL SEGUNDO DIGITO ES EL 3'."
+  clueName: Nota Oculta tras el Retrato
+  description: "Papel escondido junto al marco: 'EL SEGUNDO D\xCDGITO ES EL 3'."
   revealedValue: 3
   sequenceIndex: 1
-  hintLocation: "Retrato de la Duquesa"
+  hintLocation: Retrato en la Pared

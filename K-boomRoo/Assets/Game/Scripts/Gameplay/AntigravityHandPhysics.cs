@@ -106,13 +106,7 @@ namespace DefusalGame.Gameplay
                 return;
             }
 
-            // 3. Notas / Interactuables Antigravity
-            var antigravityGrab = other.GetComponentInParent<AntigravityGrabInteractable>();
-            if (antigravityGrab != null)
-            {
-                antigravityGrab.OnTouchedByHand(this);
-                return;
-            }
+            // 3. Notas / Interactuables (Requieren click o E explícito, no auto-trigger por proximidad)
 
             // 4. Empujarse contra paredes de la arquitectura
             if (enablePushOffWalls && playerController != null)

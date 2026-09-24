@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Room2_Clue_01
   m_EditorClassIdentifier: Assembly-CSharp::DefusalGame.Data.ClueData
   clueId: CLUE_ROOM2_01
-  clueName: "Nota del Mueble Antiguo"
-  description: "Nota escrita con tinta en el aparador: 'EL PRIMER DIGITO ES EL 7'."
+  clueName: Nota del Mueble Antiguo
+  description: "Nota escrita en el aparador: 'EL PRIMER D\xCDGITO ES EL 7'."
   revealedValue: 7
   sequenceIndex: 0
-  hintLocation: "Mueble Aparador de Madera"
+  hintLocation: Mueble Aparador de Madera
