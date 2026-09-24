@@ -47,12 +47,20 @@ namespace DefusalGame.Gameplay
             BombKeypadButton hoveredBtn = null;
             ClueInteractable hoveredClue = null;
             MissionDossier hoveredDossier = null;
+            Level3ItemPickup hoveredPickup = null;
+            InteractiveMicrowave hoveredMicrowave = null;
+            Level3FuseSwitchInteractable hoveredFuse = null;
+            Level3WireInteractable hoveredWire = null;
 
             if (hasHit)
             {
                 hoveredBtn = hit.collider.GetComponentInParent<BombKeypadButton>();
                 hoveredClue = hit.collider.GetComponentInParent<ClueInteractable>();
                 hoveredDossier = hit.collider.GetComponentInParent<MissionDossier>();
+                hoveredPickup = hit.collider.GetComponentInParent<Level3ItemPickup>();
+                hoveredMicrowave = hit.collider.GetComponentInParent<InteractiveMicrowave>();
+                hoveredFuse = hit.collider.GetComponentInParent<Level3FuseSwitchInteractable>();
+                hoveredWire = hit.collider.GetComponentInParent<Level3WireInteractable>();
 
                 if (hoveredDossier != null)
                 {
@@ -61,6 +69,22 @@ namespace DefusalGame.Gameplay
                 else if (hoveredBtn != null)
                 {
                     hoverPrompt = $"[E / Click] Pulsar Tecla [{hoveredBtn.keyValue}]";
+                }
+                else if (hoveredPickup != null)
+                {
+                    hoverPrompt = $"[E / Click] Recoger: {hoveredPickup.itemName}";
+                }
+                else if (hoveredMicrowave != null)
+                {
+                    hoverPrompt = "[E / Click] Interactuar con Microondas";
+                }
+                else if (hoveredFuse != null)
+                {
+                    hoverPrompt = $"[E / Click] Conmutar Disyuntor [{hoveredFuse.switchId}]";
+                }
+                else if (hoveredWire != null)
+                {
+                    hoverPrompt = $"[E / Click] Cortar Cable [{hoveredWire.wireColor}]";
                 }
                 else if (hoveredClue != null)
                 {
@@ -90,6 +114,30 @@ namespace DefusalGame.Gameplay
                 if (hoveredBtn != null)
                 {
                     hoveredBtn.Press();
+                    return;
+                }
+
+                if (hoveredPickup != null)
+                {
+                    hoveredPickup.PickUp();
+                    return;
+                }
+
+                if (hoveredMicrowave != null)
+                {
+                    hoveredMicrowave.Interact();
+                    return;
+                }
+
+                if (hoveredFuse != null)
+                {
+                    hoveredFuse.Interact();
+                    return;
+                }
+
+                if (hoveredWire != null)
+                {
+                    hoveredWire.Interact();
                     return;
                 }
 

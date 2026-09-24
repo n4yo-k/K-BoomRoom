@@ -54,6 +54,14 @@ namespace DefusalGame.Bomb
             {
                 controller.OnKeyPressed(keyValue);
             }
+            else
+            {
+                var l3Bomb = GetComponentInParent<Level3MultiStageBomb>();
+                if (l3Bomb != null)
+                {
+                    l3Bomb.OnKeyPressed(keyValue);
+                }
+            }
 
             StartCoroutine(ButtonFeedbackRoutine());
         }
