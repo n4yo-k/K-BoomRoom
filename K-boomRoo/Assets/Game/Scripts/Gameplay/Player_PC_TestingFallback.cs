@@ -68,35 +68,7 @@ namespace DefusalGame.Gameplay
 
         public void CheckAndConfigureVRFallback()
         {
-            bool hasVRDevice = false;
-
-            try
-            {
-                var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
-                hasVRDevice = UnityEngine.XR.XRSettings.isDeviceActive || head.isValid ||
-                             (UnityEngine.XR.Management.XRGeneralSettings.Instance != null &&
-                              UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager != null &&
-                              UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager.activeLoader != null);
-            }
-            catch
-            {
-                hasVRDevice = false;
-            }
-
-            // Si hay un XR Origin activo en la escena o un visor VR conectado, VR toma la prioridad total
-            var xrCameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            foreach (var c in xrCameras)
-            {
-                if (c != playerCamera && (c.name.Contains("XR") || c.transform.parent?.name.Contains("XR") == true || c.name.Contains("Main Camera")))
-                {
-                    if (hasVRDevice || Application.isPlaying)
-                    {
-                        // Si hay un visor VR o rig XR en la escena, desactivar fallback PC
-                        DeactivatePCFallback();
-                        return;
-                    }
-                }
-            }
+            bool hasVRDevice = IsVRHeadsetConnected();
 
             if (hasVRDevice)
             {
@@ -104,19 +76,67 @@ namespace DefusalGame.Gameplay
                 return;
             }
 
-            // Modo PC Editor activo sólo si no hay visor VR
+            // Si hay un XR Origin activo con cámara en la escena y un headset activo, VR toma la prioridad total
+            var xrCameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (var c in xrCameras)
+            {
+                if (c != playerCamera && (c.name.Contains("XR") || c.transform.parent?.name.Contains("XR") == true))
+                {
+                    if (hasVRDevice)
+                    {
+                        DeactivatePCFallback();
+                        return;
+                    }
+                }
+            }
+
+            // Modo PC Editor activo sólo si NO hay visor VR
             ActivatePCMode();
+        }
+
+        private bool IsVRHeadsetConnected()
+        {
+            try
+            {
+                if (UnityEngine.XR.XRSettings.isDeviceActive) return true;
+
+                var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+                if (head.isValid) return true;
+
+                var leftHand = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.LeftHand);
+                var rightHand = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.RightHand);
+                if (leftHand.isValid || rightHand.isValid) return true;
+
+                if (UnityEngine.XR.Management.XRGeneralSettings.Instance != null &&
+                    UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager != null &&
+                    UnityEngine.XR.Management.XRGeneralSettings.Instance.Manager.activeLoader != null)
+                {
+                    return true;
+                }
+            }
+            catch { }
+
+            return false;
         }
 
         private void DeactivatePCFallback()
         {
             isVRActive = true;
-            if (playerCamera != null) playerCamera.enabled = false;
+            if (playerCamera != null)
+            {
+                playerCamera.enabled = false;
+                playerCamera.tag = "Untagged";
+            }
             var listener = GetComponentInChildren<AudioListener>();
             if (listener != null) listener.enabled = false;
             if (characterController != null) characterController.enabled = false;
+
+            // Desbloquear cursor para que la PC no capture el ratón ni la cámara en VR
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+
             enabled = false;
-            Debug.Log("[Player_PC_TestingFallback] Visor VR detectado. Desactivando controlador PC Fallback.");
+            Debug.Log("[Player_PC_TestingFallback] ¡Visor Meta Quest detectado! Desactivando WASD/Ratón de PC. Controles VR activos.");
         }
 
         private void ActivatePCMode()
