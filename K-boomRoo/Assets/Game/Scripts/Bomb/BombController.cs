@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using DefusalGame.Data;
+using DefusalGame.Gameplay;
 
 namespace DefusalGame.Bomb
 {
@@ -134,6 +135,14 @@ namespace DefusalGame.Bomb
 
         private void ValidateCode()
         {
+            var room2Manager = UnityEngine.Object.FindFirstObjectByType<Room2EscapeRoomManager>();
+            if (room2Manager != null && !room2Manager.AreAllNotesCollected())
+            {
+                if (statusText != null) statusText.text = "ENCUENTRA LAS 4 NOTAS";
+                Debug.Log("[BombController] Código bloqueado: aún faltan notas de Room2.");
+                return;
+            }
+
             string target = (config != null) ? config.targetSequence : "4826";
             if (config != null && config.ValidateCode(enteredCode))
             {

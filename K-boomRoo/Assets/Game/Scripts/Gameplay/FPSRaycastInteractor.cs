@@ -45,6 +45,7 @@ namespace DefusalGame.Gameplay
             bool hasHit = Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask);
 
             BombKeypadButton hoveredBtn = null;
+            VRNoteInteractable hoveredNote = null;
             ClueInteractable hoveredClue = null;
             MissionDossier hoveredDossier = null;
             Level3ItemPickup hoveredPickup = null;
@@ -55,6 +56,7 @@ namespace DefusalGame.Gameplay
             if (hasHit)
             {
                 hoveredBtn = hit.collider.GetComponentInParent<BombKeypadButton>();
+                hoveredNote = hit.collider.GetComponentInParent<VRNoteInteractable>();
                 hoveredClue = hit.collider.GetComponentInParent<ClueInteractable>();
                 hoveredDossier = hit.collider.GetComponentInParent<MissionDossier>();
                 hoveredPickup = hit.collider.GetComponentInParent<Level3ItemPickup>();
@@ -85,6 +87,10 @@ namespace DefusalGame.Gameplay
                 else if (hoveredWire != null)
                 {
                     hoverPrompt = $"[E / Click] Cortar Cable [{hoveredWire.wireColor}]";
+                }
+                else if (hoveredNote != null && Room2EscapeRoomManager.Instance != null)
+                {
+                    hoverPrompt = $"[E / Click] Leer: {hoveredNote.clueData?.clueName ?? "Nota"}";
                 }
                 else if (hoveredClue != null)
                 {
@@ -138,6 +144,13 @@ namespace DefusalGame.Gameplay
                 if (hoveredWire != null)
                 {
                     hoveredWire.Interact();
+                    return;
+                }
+
+                if (hoveredNote != null && Room2EscapeRoomManager.Instance != null)
+                {
+                    hoveredNote.OnNoteInteracted();
+                    hoveredNote.SetPopupActive(true);
                     return;
                 }
 

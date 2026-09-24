@@ -9,7 +9,7 @@ namespace DefusalGame.Gameplay
 {
     /// <summary>
     /// Controlador principal del nivel Room2 (Escape Room VR).
-    /// Coordina la bomba de 3 dígitos, las 3 notas interactivas, la pizarra de misión
+    /// Coordina la bomba de 4 dígitos, las 4 notas interactivas, la pizarra de misión
     /// y los eventos de victoria / derrota integrados con el sistema de guardado.
     /// </summary>
     public class Room2EscapeRoomManager : MonoBehaviour
@@ -19,7 +19,7 @@ namespace DefusalGame.Gameplay
         [Header("Bomba y Teclado")]
         public BombController bombController;
 
-        [Header("Notas Ocultas (3 Notas)")]
+        [Header("Notas Ocultas (4 Notas)")]
         public List<VRNoteInteractable> roomNotes = new List<VRNoteInteractable>();
 
         [Header("Pizarra de Misión en la Habitación")]
@@ -109,6 +109,23 @@ namespace DefusalGame.Gameplay
             {
                 GameSaveManager.Instance.SaveGame();
             }
+        }
+
+        public bool AreAllNotesCollected()
+        {
+            if (roomNotes == null || roomNotes.Count < 4) return false;
+
+            for (int i = 0; i < roomNotes.Count; i++)
+            {
+                var note = roomNotes[i];
+                if (note == null || note.clueData == null) return false;
+
+                bool isFound = note.clueData.isCollected ||
+                    DefusalGameStateManager.CurrentState.collectedClueIds.Contains(note.clueData.clueId);
+                if (!isFound) return false;
+            }
+
+            return true;
         }
 
         private void HandleVictory()
