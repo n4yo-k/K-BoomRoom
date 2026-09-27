@@ -162,17 +162,19 @@ namespace DefusalGame.Gameplay
         {
             if (isVRActive) return;
 
-            // Soporte de tecla G para alternar ventana de guardado
+            // Soporte de tecla G para guardar partida en cualquier nivel
             bool gPressed = false;
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame) gPressed = true;
 #else
             try { if (Input.GetKeyDown(KeyCode.G)) gPressed = true; } catch { }
 #endif
-            if (gPressed && Room2UIManager.Instance != null)
+            if (gPressed)
             {
-                Room2UIManager.Instance.ToggleSavePopup();
-                return;
+                if (GameSaveManager.Instance != null)
+                {
+                    GameSaveManager.Instance.SaveGame();
+                }
             }
 
             // Si la ventana emergente de guardado está abierta, suspender movimiento y rotación de cámara

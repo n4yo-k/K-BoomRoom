@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM
@@ -704,10 +704,17 @@ namespace DefusalGame.Gameplay
             GUILayout.Label("La misión en Room2 ha fracasado. Revisa bien las 4 notas antes de ingresar el código en el teclado.", GUILayout.ExpandWidth(true));
             GUILayout.Space(20);
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("REINTENTAR MISIÓN [R]", restartBtnStyle, GUILayout.Height(50)))
             {
                 RestartLevel();
             }
+            GUILayout.Space(10);
+            if (GUILayout.Button("MENÚ PRINCIPAL", restartBtnStyle, GUILayout.Height(50)))
+            {
+                ReturnToMainMenu();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
         }
@@ -739,12 +746,27 @@ namespace DefusalGame.Gameplay
             GUILayout.Label("Recolectaste las 4 evidencias e ingresaste la secuencia táctica de 4 dígitos a tiempo.", GUILayout.ExpandWidth(true));
             GUILayout.Space(20);
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("JUGAR DE NUEVO [R]", restartBtnStyle, GUILayout.Height(50)))
             {
                 RestartLevel();
             }
+            GUILayout.Space(10);
+            if (GUILayout.Button("MENÚ PRINCIPAL", restartBtnStyle, GUILayout.Height(50)))
+            {
+                ReturnToMainMenu();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
+        }
+
+        public void ReturnToMainMenu()
+        {
+            Time.timeScale = 1.0f;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            SceneManager.LoadScene("MainMenu");
         }
         #endregion
     }

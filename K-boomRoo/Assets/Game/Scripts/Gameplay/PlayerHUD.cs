@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -287,7 +287,13 @@ namespace DefusalGame.Gameplay
                 return;
             }
 
-            // 5. HUD SUPERIOR COMPLETO DEL JUGADOR
+            // 5. Botón de acceso rápido al Menú Principal
+            if (GUI.Button(new Rect(Screen.width - 110f, 12f, 98f, 32f), "🏠 MENÚ"))
+            {
+                ReturnToMainMenu();
+            }
+
+            // 6. HUD SUPERIOR COMPLETO DEL JUGADOR
             DrawTopHUD();
         }
 
@@ -398,10 +404,17 @@ namespace DefusalGame.Gameplay
             GUILayout.Label("La misión ha fracasado. Recuerda revisar bien todas las evidencias antes de introducir la clave final.", GUILayout.ExpandWidth(true));
             GUILayout.Space(20);
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("REINTENTAR MISIÓN [R]", restartBtnStyle, GUILayout.Height(50)))
             {
                 RestartGame();
             }
+            GUILayout.Space(10);
+            if (GUILayout.Button("MENÚ PRINCIPAL", restartBtnStyle, GUILayout.Height(50)))
+            {
+                ReturnToMainMenu();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
         }
@@ -434,12 +447,27 @@ namespace DefusalGame.Gameplay
             GUILayout.Label("Lograste recolectar las 4 evidencias e ingresar la secuencia correcta a tiempo.", GUILayout.ExpandWidth(true));
             GUILayout.Space(20);
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("JUGAR DE NUEVO [R]", restartBtnStyle, GUILayout.Height(50)))
             {
                 RestartGame();
             }
+            GUILayout.Space(10);
+            if (GUILayout.Button("MENÚ PRINCIPAL", restartBtnStyle, GUILayout.Height(50)))
+            {
+                ReturnToMainMenu();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
+        }
+
+        public void ReturnToMainMenu()
+        {
+            Time.timeScale = 1.0f;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            SceneManager.LoadScene("MainMenu");
         }
     }
 }

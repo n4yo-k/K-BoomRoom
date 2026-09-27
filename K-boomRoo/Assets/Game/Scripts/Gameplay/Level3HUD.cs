@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -247,6 +247,12 @@ namespace DefusalGame.Gameplay
                 return;
             }
 
+            // Botón de acceso rápido al Menú Principal
+            if (GUI.Button(new Rect(Screen.width - 110f, 12f, 98f, 32f), "🏠 MENÚ"))
+            {
+                ReturnToMainMenu();
+            }
+
             DrawTopHUD();
         }
 
@@ -334,10 +340,17 @@ namespace DefusalGame.Gameplay
             GUILayout.Label($"Causa: {reason}", gameOverReasonStyle);
             GUILayout.Space(12);
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("REINTENTAR NIVEL 3 [R]", restartBtnStyle, GUILayout.Height(50)))
             {
                 RestartGame();
             }
+            GUILayout.Space(10);
+            if (GUILayout.Button("MENÚ PRINCIPAL", restartBtnStyle, GUILayout.Height(50)))
+            {
+                ReturnToMainMenu();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
         }
@@ -366,12 +379,27 @@ namespace DefusalGame.Gameplay
             GUILayout.Label($"¡Has superado el nivel más difícil! Tiempo restante: {mins:00}:{secs:00}.{cents:00}", timerStyle);
             GUILayout.Space(12);
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("JUGAR DE NUEVO [R]", restartBtnStyle, GUILayout.Height(50)))
             {
                 RestartGame();
             }
+            GUILayout.Space(10);
+            if (GUILayout.Button("MENÚ PRINCIPAL", restartBtnStyle, GUILayout.Height(50)))
+            {
+                ReturnToMainMenu();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
+        }
+
+        public void ReturnToMainMenu()
+        {
+            Time.timeScale = 1.0f;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            SceneManager.LoadScene("MainMenu");
         }
     }
 }
