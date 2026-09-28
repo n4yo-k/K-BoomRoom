@@ -331,6 +331,28 @@ MonoBehaviour:
   customRuntimeLoaderName: 
   m_MinResolutionScalar: 0.05
   m_MaxResolutionScalar: 1
+--- !u!114 &-7129922547763281495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c36843bac48b29469f79baf3c98f9b6, type: 3}
+  m_Name: AndroidXRHandMeshData Standalone
+  m_EditorClassIdentifier: Unity.XR.AndroidOpenXR::UnityEngine.XR.OpenXR.Features.Android.AndroidXRHandMeshData
+  m_enabled: 0
+  nameUi: 'Android XR: Hand Mesh Data'
+  version: 0.1.0
+  featureIdInternal: com.unity.openxr.feature.androidxr-hand-mesh-data
+  openxrExtensionStrings: XR_ANDROID_hand_mesh
+  company: Unity Technologies
+  priority: 0
+  targetOpenXRApiVersion: 
+  required: 0
+  customRuntimeLoaderName: 
 --- !u!114 &-7121431695470862931
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1967,7 +1989,7 @@ MonoBehaviour:
   - {fileID: -6134153850351982452}
   - {fileID: -7358379575375152457}
   - {fileID: 6845311261106728776}
-  - {fileID: -6352588998479335403}
+  - {fileID: -2761892508980449390}
   - {fileID: 3438192008280746471}
   - {fileID: -7453974150018845627}
   - {fileID: -4496717543903268656}
@@ -1978,7 +2000,7 @@ MonoBehaviour:
   - {fileID: -6205841814083936589}
   - {fileID: -8429534194523774566}
   - {fileID: -6063990398536130008}
-  - {fileID: 5845931945801517842}
+  - {fileID: 6907804247718242796}
   - {fileID: 1958399708532927317}
   - {fileID: -9045735860345967675}
   - {fileID: -7358081636947368356}
@@ -2055,7 +2077,7 @@ MonoBehaviour:
   - {fileID: 2117728756249889767}
   - {fileID: 3449944122267317480}
   - {fileID: 649763935554336105}
-  - {fileID: 6907804247718242796}
+  - {fileID: -7129922547763281495}
   - {fileID: -3072337697777051375}
   - {fileID: -914743555907557474}
   - {fileID: -7623747606488990572}
@@ -2342,7 +2364,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6c36843bac48b29469f79baf3c98f9b6, type: 3}
-  m_Name: AndroidXRHandMeshData Standalone
+  m_Name: AndroidXRHandMeshData Android
   m_EditorClassIdentifier: Unity.XR.AndroidOpenXR::UnityEngine.XR.OpenXR.Features.Android.AndroidXRHandMeshData
   m_enabled: 0
   nameUi: 'Android XR: Hand Mesh Data'

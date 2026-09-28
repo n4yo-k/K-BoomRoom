@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace DefusalGame.Gameplay
 {
@@ -32,7 +32,13 @@ namespace DefusalGame.Gameplay
         {
             hasUVLight = true;
             var uv = GetComponentInChildren<UVFlashlightController>();
-            if (uv != null) uv.PickUpFlashlight();
+            if (uv == null) uv = GetComponentInParent<UVFlashlightController>();
+            if (uv == null) uv = Object.FindAnyObjectByType<UVFlashlightController>();
+            if (uv != null)
+            {
+                uv.PickUpFlashlight();
+            }
+            Debug.Log("[Inventory] ¡Linterna UV añadida al inventario!");
         }
     }
 }

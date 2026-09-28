@@ -285,9 +285,9 @@ namespace DefusalGame.Editor
             CreateWall(corridor, "Wall_Corridor_East_South", new Vector3(3.8f, 1.4f, -1.05f), new Vector3(0.1f, 2.8f, 0.3f), matWall);
             CreateWall(corridor, "Wall_Corridor_East_Lintel", new Vector3(3.8f, 2.55f, 0f), new Vector3(0.1f, 0.5f, 2.1f), matTrim);
 
-            CreateSign(corridor, "Sign_Kitchen", new Vector3(-3.75f, 2.2f, 0f), Quaternion.Euler(0f, 90f, 0f), "← COCINA\n[Panel Eléctrico / Hielo]", Color.yellow);
-            CreateSign(corridor, "Sign_Bedroom", new Vector3(3.75f, 2.2f, 0f), Quaternion.Euler(0f, -90f, 0f), "CUARTO →\n[Dormitorio / Linterna UV]", Color.cyan);
-            CreateSign(corridor, "Sign_Study", new Vector3(0f, 2.2f, -1.15f), Quaternion.Euler(0f, 0f, 0f), "↓ ESTUDIO - BOMBA ↓", Color.red);
+            CreateSign(corridor, "Sign_Kitchen", new Vector3(-3.75f, 2.2f, 0f), Quaternion.Euler(0f, -90f, 0f), "← COCINA\n[Panel Eléctrico / Hielo]", Color.yellow);
+            CreateSign(corridor, "Sign_Bedroom", new Vector3(3.75f, 2.2f, 0f), Quaternion.Euler(0f, 90f, 0f), "CUARTO →\n[Dormitorio / Linterna UV]", Color.cyan);
+            CreateSign(corridor, "Sign_Study", new Vector3(0f, 2.2f, -1.15f), Quaternion.Euler(0f, 180f, 0f), "↓ ESTUDIO - BOMBA ↓", Color.red);
         }
 
         private static void CreateSign(GameObject parent, string name, Vector3 pos, Quaternion rot, string text, Color textColor)
@@ -346,31 +346,28 @@ namespace DefusalGame.Editor
         }
 
         // ==========================================
-        // HABITACIÓN 1: ESTUDIO (BOMBA, TECLADO VR, TERMINAL)
+        // HABITACIÓN 1: ESTUDIO (BOMBA SOBRE ESCRITORIO REAL, TECLADO VR, TERMINAL)
         // ==========================================
         private static void BuildStudyContents(GameObject root)
         {
             GameObject studyContents = new GameObject("Study_Interactive_Contents");
             studyContents.transform.SetParent(root.transform, false);
 
-            Material matWood = GetOrCreateColoredMat("Mat_StudyTable", new Color(0.24f, 0.16f, 0.10f), 0.05f, 0.3f);
             Material matMetal = GetOrCreateColoredMat("Mat_BombCase", new Color(0.12f, 0.13f, 0.15f), 0.6f, 0.5f);
-            Material matPCDesk = GetOrCreateColoredMat("Mat_PCDeskWood", new Color(0.30f, 0.22f, 0.15f), 0.05f, 0.35f);
 
-            // 1. Mesa central de la Bomba
-            GameObject table = CreateBoxPrimitive(studyContents, "Study_Bomb_Table", new Vector3(0f, 0.40f, -3.8f), new Vector3(1.8f, 0.80f, 1.0f), matWood);
+            // 1. Colisionador invisible para el escritorio ejecutivo de la habitación (impide que el jugador lo atraviese sin colocar muebles falsos)
+            GameObject deskCol = CreateBoxPrimitive(studyContents, "Study_Executive_Desk_Collider", new Vector3(0.20f, 0.55f, -3.15f), new Vector3(2.40f, 1.10f, 1.80f), null, true);
+            Renderer rend = deskCol.GetComponent<Renderer>();
+            if (rend != null) DestroyImmediate(rend);
 
-            // 2. Bomba Táctica Multietapa
-            BuildMultiStageBomb(studyContents, new Vector3(0f, 0.85f, -3.8f), matMetal);
+            // 2. Bomba Táctica Multietapa apoyada limpiamente sobre la superficie del escritorio ejecutivo (Y = 1.10m)
+            BuildMultiStageBomb(studyContents, new Vector3(0.05f, 1.10f, -2.80f), matMetal);
 
-            // 3. Hoja Dossier Táctico
-            BuildMissionDossierSheet(studyContents, new Vector3(0.50f, 0.81f, -3.75f));
+            // 3. Hoja Dossier Táctico a la derecha de la bomba sobre el escritorio
+            BuildMissionDossierSheet(studyContents, new Vector3(0.65f, 1.11f, -2.70f));
 
-            // 4. Escritorio sólido para PC
-            CreateBoxPrimitive(studyContents, "Study_Desk_PC", new Vector3(-1.8f, 0.38f, -3.8f), new Vector3(1.2f, 0.76f, 0.80f), matPCDesk);
-
-            // 5. Terminal de Computadora
-            BuildComputerTerminal(studyContents, new Vector3(-1.8f, 0.76f, -3.8f));
+            // 4. Terminal de Computadora a la izquierda de la bomba sobre el escritorio
+            BuildComputerTerminal(studyContents, new Vector3(-0.65f, 1.10f, -2.80f));
         }
 
         private static void BuildMultiStageBomb(GameObject parent, Vector3 pos, Material matCase)
@@ -378,7 +375,7 @@ namespace DefusalGame.Editor
             GameObject bombObj = new GameObject("Tactical_Level3_Bomb");
             bombObj.transform.SetParent(parent.transform, false);
             bombObj.transform.localPosition = pos;
-            bombObj.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            bombObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 
             Level3MultiStageBomb bombScript = bombObj.AddComponent<Level3MultiStageBomb>();
 
@@ -413,12 +410,13 @@ namespace DefusalGame.Editor
 
             GameObject statusTextObj = new GameObject("Status_Text");
             statusTextObj.transform.SetParent(bombObj.transform, false);
-            statusTextObj.transform.localPosition = new Vector3(0f, 0.13f, -0.18f);
+            statusTextObj.transform.localPosition = new Vector3(0f, 0.125f, -0.16f);
             statusTextObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             TextMeshPro tmStatus = statusTextObj.AddComponent<TextMeshPro>();
             tmStatus.text = "<color=red>SOBRETENSIÓN: DESCONECTA B2 EN COCINA</color>";
-            tmStatus.fontSize = 1.3f;
+            tmStatus.fontSize = 0.85f;
             tmStatus.alignment = TextAlignmentOptions.Center;
+            tmStatus.rectTransform.sizeDelta = new Vector2(0.68f, 0.14f);
             bombScript.statusText = tmStatus;
 
             GameObject strobeObj = new GameObject("Warning_Strobe_Light");
@@ -544,13 +542,13 @@ namespace DefusalGame.Editor
                 vrBridge.isBombWire = true;
 
                 GameObject labelObj = new GameObject("Wire_Label");
-                labelObj.transform.SetParent(wireObj.transform, false);
-                labelObj.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                labelObj.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+                labelObj.transform.SetParent(wiresRoot.transform, false);
+                labelObj.transform.localPosition = new Vector3(-0.07f, 0.015f, pz);
+                labelObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 TextMeshPro tm = labelObj.AddComponent<TextMeshPro>();
                 tm.text = wireName;
-                tm.fontSize = 0.7f;
-                tm.alignment = TextAlignmentOptions.Center;
+                tm.fontSize = 0.55f;
+                tm.alignment = TextAlignmentOptions.Right;
                 tm.color = wireColor;
 
                 if (wireName == "ROJO") bombScript.wireRed = wireObj;
@@ -566,7 +564,7 @@ namespace DefusalGame.Editor
             Material matClip = GetOrCreateColoredMat("Mat_Clipboard", new Color(0.28f, 0.18f, 0.12f), 0.1f, 0.3f);
 
             GameObject boardObj = CreateBoxPrimitive(parent, "Level3_Mission_Dossier", pos, new Vector3(0.36f, 0.012f, 0.48f), matClip);
-            boardObj.transform.localRotation = Quaternion.Euler(15f, -10f, 0f);
+            boardObj.transform.localRotation = Quaternion.Euler(-10f, 135f, 0f);
 
             GameObject paperObj = CreateBoxPrimitive(boardObj, "Paper_Sheet", new Vector3(0f, 0.55f, 0f), new Vector3(0.92f, 0.1f, 0.94f), matPaper, false);
 
@@ -585,7 +583,7 @@ namespace DefusalGame.Editor
                       "• Revisa la <b>TERMINAL PC</b>: indica cortar el <b>CABLE AZUL</b>.\n" +
                       "• ¡Cualquier otro cable detonará la bomba!\n\n" +
                       "<b>3. TECLADO Y CÓDIGO UV:</b>\n" +
-                      "• En el <b>CUARTO</b>, agarra la linterna UV y presiona el gatillo.\n" +
+                      "• En el <b>CUARTO</b>, agarra la linterna UV y presiona [F] / Gatillo.\n" +
                       "• Ilumina la pared para revelar el código e ingrésalo en el teclado numérico.";
             tm.fontSize = 1.15f;
             tm.color = new Color(0.1f, 0.1f, 0.15f);
@@ -598,40 +596,48 @@ namespace DefusalGame.Editor
             GameObject termObj = new GameObject("Study_Computer_Terminal");
             termObj.transform.SetParent(parent.transform, false);
             termObj.transform.localPosition = pos;
-            termObj.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
+            termObj.transform.localRotation = Quaternion.Euler(0f, 40f, 0f);
 
             Material matMonitor = GetOrCreateColoredMat("Mat_PCMonitor", new Color(0.18f, 0.19f, 0.20f), 0.3f, 0.4f);
-            Material matScreen = GetOrCreateColoredMat("Mat_PCScreenCRT", new Color(0.01f, 0.08f, 0.03f), 0f, 0.9f);
+            Material matScreen = GetOrCreateColoredMat("Mat_PCScreenCRT", new Color(0.01f, 0.05f, 0.02f), 0f, 0.9f);
 
-            CreateBoxPrimitive(termObj, "Monitor_Stand", new Vector3(0f, 0.08f, 0f), new Vector3(0.18f, 0.16f, 0.14f), matMonitor);
-            GameObject screenBox = CreateBoxPrimitive(termObj, "Monitor_Frame", new Vector3(0f, 0.32f, 0f), new Vector3(0.68f, 0.44f, 0.08f), matMonitor);
-            GameObject display = CreateBoxPrimitive(screenBox, "Screen_Glass", new Vector3(0f, 0f, 0.52f), new Vector3(0.92f, 0.88f, 0.1f), matScreen);
+            // Base y columna
+            CreateBoxPrimitive(termObj, "Monitor_Base", new Vector3(0f, 0.01f, 0f), new Vector3(0.22f, 0.02f, 0.18f), matMonitor);
+            CreateBoxPrimitive(termObj, "Monitor_Neck", new Vector3(0f, 0.09f, -0.02f), new Vector3(0.06f, 0.16f, 0.05f), matMonitor);
 
+            // Carcasa del marco
+            GameObject screenFrame = CreateBoxPrimitive(termObj, "Monitor_Frame", new Vector3(0f, 0.32f, 0f), new Vector3(0.66f, 0.42f, 0.05f), matMonitor);
+
+            // Cristal CRT
+            CreateBoxPrimitive(screenFrame, "Screen_Glass", new Vector3(0f, 0f, 0.026f), new Vector3(0.62f, 0.38f, 0.01f), matScreen);
+
+            // Texto encajado con precisión absoluta dentro de la pantalla
             GameObject textObj = new GameObject("Screen_Text");
-            textObj.transform.SetParent(display.transform, false);
-            textObj.transform.localPosition = new Vector3(0f, 0f, 0.55f);
-            textObj.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            textObj.transform.SetParent(termObj.transform, false);
+            textObj.transform.localPosition = new Vector3(0f, 0.32f, 0.035f);
+            textObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
             TextMeshPro tm = textObj.AddComponent<TextMeshPro>();
-            tm.text = "<color=#00FF66><b>[TERMINAL DE DIAGNÓSTICO BOMB_SYS]</b>\n" +
-                      "================================\n" +
-                      "ALIMENTACIÓN: SOBRECARGA DETECTADA\n" +
-                      "BYPASS OBLIGATORIO: PANEL COCINA -> [B2]\n\n" +
-                      "REGISTRO CAPACITOR SECUNDARIO:\n" +
-                      ">> CABLE CRÍTICO ACTIVO: <b>[AZUL]</b>\n" +
-                      ">> PIN SECUNDARIO: 0x4B\n\n" +
-                      "<color=yellow>¡ADVERTENCIA! CORTAR ROJO/VERDE/AMARILLO\n" +
-                      "PROVOCARÁ DETONACIÓN INMEDIATA.</color></color>";
-            tm.fontSize = 1.05f;
-            tm.alignment = TextAlignmentOptions.Center;
-            tm.rectTransform.sizeDelta = new Vector2(4.5f, 3.2f);
+            tm.text = "<color=#00FF66><b>[DIAGNÓSTICO BOMB_SYS]</b>\n" +
+                      "============================\n" +
+                      "ALIMENTACIÓN: SOBRECARGA ACTIVA\n" +
+                      "BYPASS: PANEL COCINA -> [B2]\n\n" +
+                      "CAPACITOR SECUNDARIO:\n" +
+                      ">> CORTAR CABLE: <b>[AZUL]</b>\n" +
+                      ">> PIN REGISTRO: 0x4B\n\n" +
+                      "<color=yellow>¡ADVERTENCIA! CORTAR OTRO CABLE\n" +
+                      "DETONARÁ LA BOMBA.</color></color>";
+            tm.fontSize = 0.29f;
+            tm.alignment = TextAlignmentOptions.TopLeft;
+            tm.rectTransform.sizeDelta = new Vector2(0.58f, 0.36f);
+            tm.margin = new Vector4(0.02f, 0.01f, 0.02f, 0.01f);
 
             Light crtGlow = termObj.AddComponent<Light>();
             crtGlow.type = LightType.Point;
             crtGlow.color = new Color(0.1f, 0.9f, 0.3f);
-            crtGlow.range = 2.2f;
-            crtGlow.intensity = 1.5f;
+            crtGlow.range = 1.6f;
+            crtGlow.intensity = 1.0f;
         }
-
         // ==========================================
         // HABITACIÓN 2: COCINA (PANEL VR, HIELO AGARRABLE, MICROONDAS VR)
         // ==========================================
@@ -677,7 +683,7 @@ namespace DefusalGame.Editor
             GameObject titleObj = new GameObject("Panel_Title");
             titleObj.transform.SetParent(boxObj.transform, false);
             titleObj.transform.localPosition = new Vector3(0f, 0.26f, 0.07f);
-            titleObj.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            titleObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             TextMeshPro tmTitle = titleObj.AddComponent<TextMeshPro>();
             tmTitle.text = "CUADRO ELÉCTRICO";
             tmTitle.fontSize = 1.3f;
@@ -702,7 +708,7 @@ namespace DefusalGame.Editor
                 GameObject lbl = new GameObject("Lbl");
                 lbl.transform.SetParent(lever.transform, false);
                 lbl.transform.localPosition = new Vector3(0f, -0.6f, 0.6f);
-                lbl.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+                lbl.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
                 TextMeshPro tmLbl = lbl.AddComponent<TextMeshPro>();
                 tmLbl.text = sId;
                 tmLbl.fontSize = 1.8f;
@@ -776,7 +782,7 @@ namespace DefusalGame.Editor
             GameObject textObj = new GameObject("Display_Text");
             textObj.transform.SetParent(display.transform, false);
             textObj.transform.localPosition = new Vector3(0f, 0f, 0.6f);
-            textObj.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            textObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             TextMeshPro tm = textObj.AddComponent<TextMeshPro>();
             tm.text = "00:03";
             tm.fontSize = 1.3f;
@@ -834,8 +840,8 @@ namespace DefusalGame.Editor
             // Linterna UV Agarrable en Realidad Virtual con gatillo activador
             BuildUVFlashlightPickup(bedroomContents, new Vector3(6.2f, 0.79f, 1.6f));
 
-            // Marcador UV secreto en la pared
-            BuildUVSecretMarker(bedroomContents, new Vector3(6.8f, 1.65f, 2.55f));
+            // Marcador UV secreto en la pared norte del cuarto (en la superficie interior de la pared)
+            BuildUVSecretMarker(bedroomContents, new Vector3(5.4f, 1.65f, 2.38f));
         }
 
         private static void BuildUVFlashlightPickup(GameObject parent, Vector3 pos)
@@ -880,26 +886,28 @@ namespace DefusalGame.Editor
             GameObject markerObj = new GameObject("UV_Wall_Secret_Marker");
             markerObj.transform.SetParent(parent.transform, false);
             markerObj.transform.localPosition = pos;
-            markerObj.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            markerObj.transform.localRotation = Quaternion.identity;
 
             UVClueMarker markerScript = markerObj.AddComponent<UVClueMarker>();
             markerScript.clueText = "7 5 3 1";
-            markerScript.labelDescription = "CÓDIGO BOMBA: [ 7 5 3 1 ]";
+            markerScript.labelDescription = "<size=65%>CÓDIGO DE DESACTIVACIÓN:</size>\n<color=#33FF99><b>7  5  3  1</b></color>";
+            markerScript.revealDistance = 8.5f;
+            markerScript.revealAngle = 70f;
 
             GameObject textObj = new GameObject("UV_Fluorescent_Text");
             textObj.transform.SetParent(markerObj.transform, false);
             textObj.transform.localPosition = new Vector3(0f, 0f, 0.02f);
-            textObj.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            textObj.transform.localRotation = Quaternion.identity;
 
             TextMeshPro tm = textObj.AddComponent<TextMeshPro>();
-            tm.text = "7  5  3  1";
-            tm.fontSize = 3.6f;
+            tm.text = markerScript.labelDescription;
+            tm.fontSize = 2.4f;
             tm.alignment = TextAlignmentOptions.Center;
             tm.fontStyle = FontStyles.Bold;
-            tm.color = new Color(0.1f, 1.0f, 0.6f, 0.0f);
+            tm.rectTransform.sizeDelta = new Vector2(3.5f, 1.6f);
+            tm.color = new Color(0.2f, 1.0f, 0.6f, 0.0f);
             markerScript.textMesh = tm;
         }
-
         // ==========================================
         // ILUMINACIÓN Y ATMÓSFERA
         // ==========================================
@@ -999,6 +1007,40 @@ namespace DefusalGame.Editor
 
             FPSRaycastInteractor interactor = camObj.AddComponent<FPSRaycastInteractor>();
             interactor.interactDistance = 3.5f;
+
+            // Linterna UV táctica montada en la cámara del jugador (se activa al recogerla en el cuarto)
+            GameObject uvSpotObj = new GameObject("Player_UV_SpotLight");
+            uvSpotObj.transform.SetParent(camObj.transform, false);
+            uvSpotObj.transform.localPosition = new Vector3(0.2f, -0.15f, 0.3f);
+            uvSpotObj.transform.localRotation = Quaternion.identity;
+
+            Light uvLight = uvSpotObj.AddComponent<Light>();
+            uvLight.type = LightType.Spot;
+            uvLight.color = new Color(0.68f, 0.18f, 1.0f); // Luz ultravioleta violeta-azul neón
+            uvLight.spotAngle = 65f;
+            uvLight.innerSpotAngle = 40f;
+            uvLight.range = 14f;
+            uvLight.intensity = 8.0f;
+            uvLight.enabled = false;
+
+            // Luz ambiental UV de relleno para teñir la habitación y confirmar activación al jugador
+            GameObject uvFillObj = new GameObject("Player_UV_FillLight");
+            uvFillObj.transform.SetParent(camObj.transform, false);
+            uvFillObj.transform.localPosition = new Vector3(0f, 0f, 0.2f);
+            uvFillObj.transform.localRotation = Quaternion.identity;
+
+            Light uvFill = uvFillObj.AddComponent<Light>();
+            uvFill.type = LightType.Point;
+            uvFill.color = new Color(0.60f, 0.10f, 0.95f);
+            uvFill.range = 6.0f;
+            uvFill.intensity = 2.5f;
+            uvFill.enabled = false;
+
+            UVFlashlightController uvCtrl = desktopPlayer.AddComponent<UVFlashlightController>();
+            uvCtrl.uvLightSource = uvLight;
+            uvCtrl.uvFillLight = uvFill;
+            uvCtrl.hasPickedUpUV = false;
+            uvCtrl.isUVActive = false;
 
             desktopPlayer.AddComponent<PlayerInventory>();
 
