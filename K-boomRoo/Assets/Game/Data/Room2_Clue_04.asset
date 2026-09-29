@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Room2_Clue_04
   m_EditorClassIdentifier: Assembly-CSharp::DefusalGame.Data.ClueData
   clueId: CLUE_ROOM2_04
-  clueName: "Nota Oculta en el Sal\xF3n"
-  description: "Documento secreto junto a los sillones: 'EL CUARTO D\xCDGITO ES EL
-    5'."
+  clueName: Nota Oculta en la Mesa de la Bomba
+  description: "Documento confidencial junto al malet\xEDn C4: 'EL CUARTO D\xCDGITO
+    ES EL 5'."
   revealedValue: 5
   sequenceIndex: 3
-  hintLocation: Mesa de la Sala de Estar
+  hintLocation: Mesa de la Bomba

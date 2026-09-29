@@ -41,8 +41,7 @@ namespace DefusalGame.Gameplay
 
         void Awake()
         {
-            if (Instance == null) Instance = this;
-            else if (Instance != this) Destroy(gameObject);
+            Instance = this;
         }
 
         void Start()
@@ -69,6 +68,7 @@ namespace DefusalGame.Gameplay
 
         void OnDestroy()
         {
+            if (Instance == this) Instance = null;
             if (GameSaveManager.Instance != null)
             {
                 GameSaveManager.Instance.OnGameLoaded -= OnSaveLoaded;

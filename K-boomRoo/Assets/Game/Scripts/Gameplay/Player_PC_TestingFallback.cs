@@ -22,18 +22,18 @@ namespace DefusalGame.Gameplay
         public float mouseSensitivity = 0.12f;
         public float interactRange = 3.2f;
 
-        [Header("Locomoción Antigravity")]
-        public float moveSpeed = 3.5f;
-        public float verticalSpeed = 2.8f;
-        public float boostMultiplier = 1.8f;
-        public float damping = 1.8f;
+        [Header("Locomoción FPS")]
+        public float moveSpeed = 3.2f;
+        public float runSpeed = 5.0f;
+        public float gravity = -9.81f;
+        public float jumpForce = 4.5f;
 
         [Header("Interacción y Retícula")]
         public bool showCrosshair = true;
         public LayerMask interactableMask = ~0;
 
         private CharacterController characterController;
-        private Vector3 currentVelocity = Vector3.zero;
+        private float verticalVelocity = 0f;
         private float cameraPitch = 0f;
         private bool isVRActive = false;
         private Texture2D crosshairTexture;
@@ -187,7 +187,7 @@ namespace DefusalGame.Gameplay
             HandleCursorToggle();
             HandleInputShortcuts();
             HandleMouseLook();
-            HandleAntigravityMovement();
+            HandleMovement();
             HandleRaycastInteraction();
         }
 
@@ -257,6 +257,71 @@ namespace DefusalGame.Gameplay
             {
                 GameSaveManager.Instance.ClearSaveData();
             }
+
+            // Atajos de teclado físico (0-9, Backspace/C, Enter) para la bomba cuando el jugador está cerca
+            HandleBombKeypadShortcuts();
+        }
+
+        private void HandleBombKeypadShortcuts()
+        {
+            var bomb = UnityEngine.Object.FindAnyObjectByType<BombController>();
+            if (bomb == null || bomb.currentState != BombState.Armed) return;
+
+            // Solo si el jugador está en la sala de la bomba (a menos de 4.5 metros)
+            if (Vector3.Distance(transform.position, bomb.transform.position) > 4.5f) return;
+
+            string keyToSend = null;
+
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null)
+            {
+                if (Keyboard.current.digit1Key.wasPressedThisFrame || Keyboard.current.numpad1Key.wasPressedThisFrame) keyToSend = "1";
+                else if (Keyboard.current.digit2Key.wasPressedThisFrame || Keyboard.current.numpad2Key.wasPressedThisFrame) keyToSend = "2";
+                else if (Keyboard.current.digit3Key.wasPressedThisFrame || Keyboard.current.numpad3Key.wasPressedThisFrame) keyToSend = "3";
+                else if (Keyboard.current.digit4Key.wasPressedThisFrame || Keyboard.current.numpad4Key.wasPressedThisFrame) keyToSend = "4";
+                else if (Keyboard.current.digit5Key.wasPressedThisFrame || Keyboard.current.numpad5Key.wasPressedThisFrame) keyToSend = "5";
+                else if (Keyboard.current.digit6Key.wasPressedThisFrame || Keyboard.current.numpad6Key.wasPressedThisFrame) keyToSend = "6";
+                else if (Keyboard.current.digit7Key.wasPressedThisFrame || Keyboard.current.numpad7Key.wasPressedThisFrame) keyToSend = "7";
+                else if (Keyboard.current.digit8Key.wasPressedThisFrame || Keyboard.current.numpad8Key.wasPressedThisFrame) keyToSend = "8";
+                else if (Keyboard.current.digit9Key.wasPressedThisFrame || Keyboard.current.numpad9Key.wasPressedThisFrame) keyToSend = "9";
+                else if (Keyboard.current.digit0Key.wasPressedThisFrame || Keyboard.current.numpad0Key.wasPressedThisFrame) keyToSend = "0";
+                else if (Keyboard.current.cKey.wasPressedThisFrame || Keyboard.current.backspaceKey.wasPressedThisFrame) keyToSend = "C";
+                else if (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.numpadEnterKey.wasPressedThisFrame) keyToSend = "ENT";
+            }
+#else
+            try
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) keyToSend = "1";
+                else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) keyToSend = "2";
+                else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) keyToSend = "3";
+                else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4)) keyToSend = "4";
+                else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5)) keyToSend = "5";
+                else if (Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6)) keyToSend = "6";
+                else if (Input.GetKeyDown(KeyCode.Alpha7) || Input.GetKeyDown(KeyCode.Keypad7)) keyToSend = "7";
+                else if (Input.GetKeyDown(KeyCode.Alpha8) || Input.GetKeyDown(KeyCode.Keypad8)) keyToSend = "8";
+                else if (Input.GetKeyDown(KeyCode.Alpha9) || Input.GetKeyDown(KeyCode.Keypad9)) keyToSend = "9";
+                else if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0)) keyToSend = "0";
+                else if (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.Backspace)) keyToSend = "C";
+                else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) keyToSend = "ENT";
+            }
+            catch { }
+#endif
+
+            if (!string.IsNullOrEmpty(keyToSend))
+            {
+                bomb.OnKeyPressed(keyToSend);
+
+                // Animar el botón correspondiente si está visible
+                var buttons = UnityEngine.Object.FindObjectsByType<BombKeypadButton>(FindObjectsSortMode.None);
+                foreach (var b in buttons)
+                {
+                    if (b.keyValue == keyToSend)
+                    {
+                        b.Press();
+                        break;
+                    }
+                }
+            }
         }
 
         private void HandleMouseLook()
@@ -285,58 +350,54 @@ namespace DefusalGame.Gameplay
             playerCamera.transform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
         }
 
-        private void HandleAntigravityMovement()
+        private void HandleMovement()
         {
-            Vector3 inputDir = Vector3.zero;
-            bool isBoost = false;
+            Vector2 inputDir = Vector2.zero;
+            bool isRunning = false;
 
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current != null)
             {
-                if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) inputDir.z += 1f;
-                if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) inputDir.z -= 1f;
+                if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) inputDir.y += 1f;
+                if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) inputDir.y -= 1f;
                 if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) inputDir.x -= 1f;
                 if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) inputDir.x += 1f;
 
-                // Elevación / Descenso en gravedad cero
-                if (Keyboard.current.spaceKey.isPressed) inputDir.y += 1f;
-                if (Keyboard.current.cKey.isPressed || Keyboard.current.leftCtrlKey.isPressed) inputDir.y -= 1f;
-
-                isBoost = Keyboard.current.leftShiftKey.isPressed;
+                isRunning = Keyboard.current.leftShiftKey.isPressed;
             }
 #else
             try
             {
                 inputDir.x = Input.GetAxisRaw("Horizontal");
-                inputDir.z = Input.GetAxisRaw("Vertical");
-                if (Input.GetKey(KeyCode.Space)) inputDir.y += 1f;
-                if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl)) inputDir.y -= 1f;
-                isBoost = Input.GetKey(KeyCode.LeftShift);
+                inputDir.y = Input.GetAxisRaw("Vertical");
+                isRunning = Input.GetKey(KeyCode.LeftShift);
             }
             catch { }
 #endif
 
             if (inputDir.sqrMagnitude > 1f) inputDir.Normalize();
 
-            Transform camT = (playerCamera != null) ? playerCamera.transform : transform;
-            Vector3 worldMove = (transform.right * inputDir.x) + (transform.forward * inputDir.z) + (Vector3.up * inputDir.y);
-
-            float speed = (isBoost ? moveSpeed * boostMultiplier : moveSpeed);
-            if (worldMove.sqrMagnitude > 0.01f)
-            {
-                currentVelocity += worldMove * speed * 3.5f * Time.deltaTime;
-            }
-
-            // Amortiguación inercial
-            currentVelocity = Vector3.Lerp(currentVelocity, Vector3.zero, damping * Time.deltaTime);
+            float speed = isRunning ? runSpeed : moveSpeed;
+            Vector3 move = (transform.right * inputDir.x) + (transform.forward * inputDir.y);
 
             if (characterController != null && characterController.enabled)
             {
-                CollisionFlags flags = characterController.Move(currentVelocity * Time.deltaTime);
-                if (flags != CollisionFlags.None)
+                if (characterController.isGrounded)
                 {
-                    currentVelocity *= 0.5f;
+                    if (verticalVelocity < 0f) verticalVelocity = -2.0f;
+
+                    bool jump = false;
+#if ENABLE_INPUT_SYSTEM
+                    if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) jump = true;
+#else
+                    try { if (Input.GetKeyDown(KeyCode.Space)) jump = true; } catch { }
+#endif
+                    if (jump) verticalVelocity = jumpForce;
                 }
+
+                verticalVelocity += gravity * Time.deltaTime;
+                Vector3 motion = (move * speed) + (Vector3.up * verticalVelocity);
+                characterController.Move(motion * Time.deltaTime);
             }
         }
 
@@ -357,19 +418,37 @@ namespace DefusalGame.Gameplay
                 hoveredBtn = hit.collider.GetComponentInParent<BombKeypadButton>();
                 hoveredNote = hit.collider.GetComponentInParent<VRNoteInteractable>();
                 hoveredSaveBtn = hit.collider.GetComponentInParent<AntigravityPhysicalButton>();
+            }
 
-                if (hoveredSaveBtn != null)
+            // Asistencia magnética con SphereCast (6cm de radio) para apuntar cómodamente a las teclas
+            if (hoveredBtn == null && hoveredNote == null && hoveredSaveBtn == null)
+            {
+                if (Physics.SphereCast(ray, 0.06f, out RaycastHit sphereHit, interactRange, interactableMask))
                 {
-                    hoverInfoText = "[CLICK / E] Guardar Partida (Terminal 3D)";
+                    var sBtn = sphereHit.collider.GetComponentInParent<BombKeypadButton>();
+                    var sNote = sphereHit.collider.GetComponentInParent<VRNoteInteractable>();
+                    var sSave = sphereHit.collider.GetComponentInParent<AntigravityPhysicalButton>();
+                    if (sBtn != null || sNote != null || sSave != null)
+                    {
+                        hoveredBtn = sBtn;
+                        hoveredNote = sNote;
+                        hoveredSaveBtn = sSave;
+                        hasHit = true;
+                    }
                 }
-                else if (hoveredBtn != null)
-                {
-                    hoverInfoText = $"[CLICK / E] Pulsar Tecla [{hoveredBtn.keyValue}]";
-                }
-                else if (hoveredNote != null)
-                {
-                    hoverInfoText = "[E / Click] Inspeccionar...";
-                }
+            }
+
+            if (hoveredSaveBtn != null)
+            {
+                hoverInfoText = "[CLICK / E] Guardar Partida (Terminal 3D)";
+            }
+            else if (hoveredBtn != null)
+            {
+                hoverInfoText = $"[CLICK / E] Pulsar Tecla [{hoveredBtn.keyValue}]";
+            }
+            else if (hoveredNote != null)
+            {
+                hoverInfoText = "[E / Click] Inspeccionar...";
             }
 
             if (Room2UIManager.Instance != null)

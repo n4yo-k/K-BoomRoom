@@ -83,22 +83,15 @@ namespace DefusalGame.Gameplay
         private GUIStyle gameOverReasonStyle;
         private GUIStyle victoryTitleStyle;
         private GUIStyle restartBtnStyle;
+        private GUIStyle hudTitleStyle;
+        private GUIStyle hudStateStyle;
 
         private CursorLockMode previousCursorMode = CursorLockMode.Locked;
         private bool previousCursorVisibility = false;
 
         void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else if (Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
+            Instance = this;
             FindReferences();
             CreateTextures();
         }
@@ -117,6 +110,7 @@ namespace DefusalGame.Gameplay
 
         void OnDestroy()
         {
+            if (Instance == this) Instance = null;
             if (GameSaveManager.Instance != null)
             {
                 GameSaveManager.Instance.OnGameSaved -= OnGameSavedHandler;
@@ -139,6 +133,19 @@ namespace DefusalGame.Gameplay
             {
                 originalCamLocalPos = playerCamera.transform.localPosition;
                 hasSavedCamPos = true;
+            }
+
+            if (clue1 == null || clue2 == null || clue3 == null || clue4 == null)
+            {
+                var notes = UnityEngine.Object.FindObjectsByType<VRNoteInteractable>(FindObjectsSortMode.None);
+                foreach (var note in notes)
+                {
+                    if (note.clueData == null) continue;
+                    if (note.clueData.clueId == "CLUE_ROOM2_01" || note.clueData.sequenceIndex == 0) clue1 = note.clueData;
+                    else if (note.clueData.clueId == "CLUE_ROOM2_02" || note.clueData.sequenceIndex == 1) clue2 = note.clueData;
+                    else if (note.clueData.clueId == "CLUE_ROOM2_03" || note.clueData.sequenceIndex == 2) clue3 = note.clueData;
+                    else if (note.clueData.clueId == "CLUE_ROOM2_04" || note.clueData.sequenceIndex == 3) clue4 = note.clueData;
+                }
             }
         }
 
@@ -325,11 +332,30 @@ namespace DefusalGame.Gameplay
                 padding = new RectOffset(14, 14, 8, 8)
             };
 
+            hudTitleStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                normal = { textColor = new Color(0.35f, 0.85f, 1.0f) }
+            };
+
+            hudStateStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 13,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleRight,
+                richText = true,
+                normal = { textColor = Color.yellow }
+            };
+
             timerStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 22,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
+                richText = true,
                 normal = { textColor = new Color(1.0f, 0.85f, 0.25f) }
             };
 
@@ -338,6 +364,7 @@ namespace DefusalGame.Gameplay
                 fontSize = 24,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
+                richText = true,
                 normal = { textColor = new Color(1.0f, 0.25f, 0.25f) }
             };
 
@@ -347,6 +374,7 @@ namespace DefusalGame.Gameplay
                 fontSize = 12,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
+                richText = true,
                 padding = new RectOffset(6, 6, 4, 4)
             };
 
@@ -356,6 +384,7 @@ namespace DefusalGame.Gameplay
                 fontSize = 12,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
+                richText = true,
                 padding = new RectOffset(6, 6, 4, 4)
             };
 
@@ -364,6 +393,7 @@ namespace DefusalGame.Gameplay
                 fontSize = 12,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
+                richText = true,
                 normal = { textColor = new Color(0.9f, 0.9f, 0.9f) }
             };
 
@@ -372,6 +402,7 @@ namespace DefusalGame.Gameplay
                 fontSize = 13,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
+                richText = true,
                 normal = { textColor = new Color(0.2f, 1.0f, 0.4f) }
             };
 
@@ -474,6 +505,7 @@ namespace DefusalGame.Gameplay
 
         void OnGUI()
         {
+            GUI.depth = 0;
             InitStyles();
 
             // 1. Destello por explosión
@@ -530,7 +562,7 @@ namespace DefusalGame.Gameplay
             // FILA 1: TÍTULO, CRONÓMETRO REGRESIVO Y ESTADO DE LA BOMBA
             GUILayout.BeginHorizontal();
 
-            GUILayout.Label("DISPOSITIVO C4 TÁCTICO", GUILayout.Width(210f));
+            GUILayout.Label("DISPOSITIVO C4 TÁCTICO", hudTitleStyle, GUILayout.Width(210f));
 
             float t = (bomb != null) ? bomb.timeRemaining : 300f;
             int mins = Mathf.FloorToInt(t / 60f);
@@ -549,7 +581,7 @@ namespace DefusalGame.Gameplay
             if (t <= 0f) stateLabel = "<color=red>ESTADO: ¡DETONANDO!</color>";
             else if (bomb != null && bomb.currentState == BombState.Defused) stateLabel = "<color=#00FF66>ESTADO: NEUTRALIZADA</color>";
 
-            GUILayout.Label(stateLabel, GUILayout.Width(200f));
+            GUILayout.Label(stateLabel, hudStateStyle, GUILayout.Width(200f));
 
             GUILayout.EndHorizontal();
 
@@ -580,8 +612,8 @@ namespace DefusalGame.Gameplay
             string text3 = c3 ? $"✓ 3. Libros: [ {val3} ]" : "[ ] 3. Libros";
             GUILayout.Box(text3, c3 ? badgeFoundStyle : badgePendingStyle, GUILayout.Height(26), GUILayout.ExpandWidth(true));
 
-            // Ranura 4: Atrio / Sala
-            string text4 = c4 ? $"✓ 4. Atrio: [ {val4} ]" : "[ ] 4. Atrio";
+            // Ranura 4: Mesa Bomba
+            string text4 = c4 ? $"✓ 4. Bomba: [ {val4} ]" : "[ ] 4. Mesa Bomba";
             GUILayout.Box(text4, c4 ? badgeFoundStyle : badgePendingStyle, GUILayout.Height(26), GUILayout.ExpandWidth(true));
 
             GUILayout.EndHorizontal();
@@ -592,7 +624,7 @@ namespace DefusalGame.Gameplay
             int count = (c1 ? 1 : 0) + (c2 ? 1 : 0) + (c3 ? 1 : 0) + (c4 ? 1 : 0);
             if (count == 4)
             {
-                GUILayout.Label($"★ ¡SECUENCIA DESCUBIERTA: {val1} {val2} {val3} {val4}! Vuelve a la mesa de la bomba y presiona ENT ★", codeReadyStyle);
+                GUILayout.Label($"★ ¡SECUENCIA: {val1} {val2} {val3} {val4}! Pulsa las teclas del C4 (Clic / E o teclado numérico) y presiona ENT ★", codeReadyStyle);
             }
             else
             {

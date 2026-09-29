@@ -12,17 +12,26 @@ using DefusalGame.Data;
 using DefusalGame.Bomb;
 using DefusalGame.Gameplay;
 using DefusalGame.Save;
+using DefusalGame.VR;
 
 namespace DefusalGame.Editor
 {
     /// <summary>
-    /// Genera la escena Room2 completa con:
-    /// - 3 cuartos cerrados + pasillo conector (paredes/suelo/techo sólidos con primitivas)
-    /// - Meshes Meshy AI colocados DENTRO de cada cuarto
-    /// - 4 notas interactivas con ClueInteractable + FPSRaycastInteractor en PC
-    /// - HUD de bomba replicado (4 ranuras, verde+✓ al recoger)
-    /// - Pop-up de guardado (tecla G / botón 3D VR)
-    /// - Sistema de guardado JSON
+    /// Genera la escena Room2 completa:
+    /// - 4 Habitaciones principales Meshy AI conectadas con exactitud arquitectónica:
+    ///   • Sala 1: cuarto2 (rot 270°) - Cámara de la Bomba, aberturas hacia el Sur y Este
+    ///   • Pasillo Z: pasilloo (rot 0°) - Portal Norte conecta con Sala 1, Portal Sur conecta con Sala 2
+    ///   • Sala 2: livingroommeshy (rot 180°) - Entrada de doble puerta abierta hacia el Pasillo Z
+    ///   • Pasillo X: Galería conector Este cerrada que une Sala 1 con Sala 3
+    ///   • Sala 3: saladeestar (rot 90°) - Entrada de doble puerta abierta hacia el Pasillo X
+    /// - Techos y paredes envolventes exteriores para cerrar completamente las secciones diorama
+    ///   (evita fugas de luz o ver el vacío exterior)
+    /// - Marcos ornamentales y letreros direccionales en cada umbral
+    /// - Suelo maestro plano y continuo en Y=0.00m (cero flotación, movimiento FPS veloz y fluido)
+    /// - Bomba táctica C4 completa con display, teclado y 4 ranuras de clave
+    /// - 4 Notas interactivas con clave [7 3 9 5]
+    /// - Terminal 3D de guardado con tecla G en PC y botón en VR
+    /// - Compatibilidad dual Desktop PC y VR (Meta Quest)
     /// </summary>
     [InitializeOnLoad]
     public class Room2SceneBuilder : EditorWindow
@@ -33,12 +42,31 @@ namespace DefusalGame.Editor
         private const string OBJ_PATH         = "Assets/objRefs/Extracted";
         private const string REBUILD_FLAG     = "Assets/.rebuild_room2_pending";
 
-        // ─── Dimensiones de cada sala ─────────────────────────────────────────────
-        // Sala 1: Cámara de la Bomba   (centro world = 0, 0, 0)         12×4×10
-        // Pasillo Conector             (centro world = 0, 0, -8)         4×4×6
-        // Sala 2: El Atrio             (centro world = 0, 0, -14)       10×4×10
-        // Sala 3: El Despacho          (centro world = 10, 0, -7)       10×4×10
-        // (el pasillo lateral une Sala1 con Sala3 en X)
+        // Rutas de modelos Meshy AI principales (Cuartos y Pasillos)
+        private const string OBJ_CUARTO2     = "Assets/objRefs/Extracted/cuarto2/Meshy_AI_The_Investigation_Roo_0917134539_texture_obj/Meshy_AI_The_Investigation_Roo_0917134539_texture.obj";
+        private const string TEX_CUARTO2     = "Assets/objRefs/Extracted/cuarto2/Meshy_AI_The_Investigation_Roo_0917134539_texture_obj/Meshy_AI_The_Investigation_Roo_0917134539_texture.png";
+
+        private const string OBJ_PASILLO     = "Assets/objRefs/Extracted/pasilloo/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture_obj/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture.obj";
+        private const string TEX_PASILLO     = "Assets/objRefs/Extracted/pasilloo/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture_obj/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture.png";
+
+        private const string OBJ_LIVINGROOM  = "Assets/objRefs/Extracted/livingroommeshy/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture_obj/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture.obj";
+        private const string TEX_LIVINGROOM  = "Assets/objRefs/Extracted/livingroommeshy/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture_obj/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture.png";
+
+        private const string OBJ_SALADEESTAR = "Assets/objRefs/Extracted/saladeestar/Meshy_AI_Shadowed_Parlor_0923190159_texture_obj/Meshy_AI_Shadowed_Parlor_0923190159_texture.obj";
+        private const string TEX_SALADEESTAR = "Assets/objRefs/Extracted/saladeestar/Meshy_AI_Shadowed_Parlor_0923190159_texture_obj/Meshy_AI_Shadowed_Parlor_0923190159_texture.png";
+
+        // Rutas de props Meshy AI
+        private const string OBJ_CAMA        = "Assets/objRefs/Extracted/cama/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture_obj/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture.obj";
+        private const string TEX_CAMA        = "Assets/objRefs/Extracted/cama/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture_obj/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture.png";
+
+        private const string OBJ_MUEBLESITO  = "Assets/objRefs/Extracted/mueblesito/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture_obj/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture.obj";
+        private const string TEX_MUEBLESITO  = "Assets/objRefs/Extracted/mueblesito/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture_obj/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture.png";
+
+        private const string OBJ_RETRATO     = "Assets/objRefs/Extracted/retrato/Meshy_AI_The_Faded_Duchess_0917125445_texture_obj/Meshy_AI_The_Faded_Duchess_0917125445_texture.obj";
+        private const string TEX_RETRATO     = "Assets/objRefs/Extracted/retrato/Meshy_AI_The_Faded_Duchess_0917125445_texture_obj/Meshy_AI_The_Faded_Duchess_0917125445_texture.png";
+
+        private const string OBJ_LIBROS      = "Assets/objRefs/Extracted/Libros/Meshy_AI_Ornate_Book_Stack_0917121445_texture_obj/Meshy_AI_Ornate_Book_Stack_0917121445_texture.obj";
+        private const string TEX_LIBROS      = "Assets/objRefs/Extracted/Libros/Meshy_AI_Ornate_Book_Stack_0917121445_texture_obj/Meshy_AI_Ornate_Book_Stack_0917121445_texture.png";
 
         static Room2SceneBuilder()
         {
@@ -50,7 +78,7 @@ namespace DefusalGame.Editor
             if (!File.Exists(SCENE_PATH) || File.Exists(REBUILD_FLAG))
             {
                 if (File.Exists(REBUILD_FLAG)) { try { File.Delete(REBUILD_FLAG); } catch { } }
-                Debug.Log("[Room2SceneBuilder] Reconstruyendo Room2...");
+                Debug.Log("[Room2SceneBuilder] Reconstruyendo Room2 con orientación y conexiones perfectas...");
                 BuildRoom2Scene(showDialog: false);
             }
         }
@@ -73,28 +101,32 @@ namespace DefusalGame.Editor
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             GameObject root = new GameObject("DefusalGame_Room2");
 
-            // 1. Iluminación ambiental
+            // 1. Iluminación ambiental cálida e inmersiva
             SetupLighting(root);
 
-            // 2. Arquitectura: suelos/paredes/techos sólidos + meshes dentro
-            BuildFullArchitecture(root);
+            // 2. Arquitectura: 4 cuartos Meshy AI conectados a la perfección + pasillo conector + techos envolventes
+            TextMeshPro boardTMP = BuildFullArchitecture(root);
 
-            // 3. Bomba táctica sobre la mesa
+            // 3. Bomba táctica C4 sobre la mesa
             GameObject bombObj = BuildTacticalBomb(root);
 
-            // 4. Notas interactivas (4)
+            // 4. Notas interactivas (4 pistas numéricas)
             List<ClueInteractable> notes = PlaceNotes(root);
 
-            // 5. Terminal de guardado 3D
+            // 5. Terminal de guardado 3D con botón físico
             AntigravitySaveTerminal saveTerminal = BuildSaveTerminal(root);
 
-            // 6. Sistemas (Save, EscapeRoomManager, UIManager)
-            SetupSystems(root, bombObj.GetComponent<BombController>(), notes);
+            // 6. Sistemas (SaveManager, EscapeRoomManager, UIManager)
+            Room2UIManager uiMgr = SetupSystems(root, bombObj.GetComponent<BombController>(), notes, boardTMP);
 
-            // 7. Player (PC fallback + XR Origin)
-            SetupPlayer(root);
+            // 7. Player (PC Fallback + XR Origin VR con VRPlayerRigManager)
+            Camera playerCam = SetupPlayer(root);
+            if (uiMgr != null && playerCam != null)
+            {
+                uiMgr.playerCamera = playerCam;
+            }
 
-            // Guardar
+            // Guardar escena
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, SCENE_PATH);
             RegisterSceneInBuildSettings(SCENE_PATH);
@@ -105,19 +137,20 @@ namespace DefusalGame.Editor
             if (SceneView.lastActiveSceneView != null)
                 SceneView.lastActiveSceneView.FrameSelected();
 
-            Debug.Log("[Room2SceneBuilder] ¡Room2 construida y guardada en " + SCENE_PATH + "!");
+            Debug.Log("[Room2SceneBuilder] ¡Room2 construida con éxito con conexiones perfectas y cuartos cerrados!");
 
             if (showDialog)
             {
                 EditorUtility.DisplayDialog(
-                    "¡Room2 Lista!",
-                    "Room2 generada con:\n\n" +
-                    "• 3 cuartos cerrados + pasillo conector.\n" +
-                    "• 4 notas con [E / Click] Inspeccionar.\n" +
-                    "• HUD de bomba (4 ranuras → verde ✓).\n" +
-                    "• Pop-up guardado con tecla G.\n" +
-                    "• Sistema JSON de guardado.\n\n" +
-                    "Presiona Play y prueba con WASD + E + G.",
+                    "¡Room2 Lista y Perfectamente Conectada!",
+                    "Room2 generada con éxito:\n\n" +
+                    "• 4 Cuartos Meshy AI alineados con puertas orientadas exactamente hacia los pasillos.\n" +
+                    "• Pasillo X y Pasillo Z comunican las 3 salas sin huecos ni ver el vacío.\n" +
+                    "• Techos y paredes exteriores envolventes cerrados.\n" +
+                    "• Suelo continuo perfectamente plano en Y=0 (cero flotación).\n" +
+                    "• 4 pistas de la clave [7 3 9 5] listas para inspeccionar.\n" +
+                    "• Bomba C4 y terminal de guardado [G] operativas.\n\n" +
+                    "Presiona Play en Unity para probar.",
                     "¡Excelente!");
             }
         }
@@ -145,9 +178,9 @@ namespace DefusalGame.Editor
                 "9", 2, "Pila de Libros Ornamentados");
 
             ClueData c4 = GetOrCreateClue("Room2_Clue_04", "CLUE_ROOM2_04",
-                "Nota Oculta en el Salón",
-                "Documento secreto junto a los sillones: 'EL CUARTO DÍGITO ES EL 5'.",
-                "5", 3, "Mesa de la Sala de Estar");
+                "Nota Oculta en la Mesa de la Bomba",
+                "Documento confidencial junto al maletín C4: 'EL CUARTO DÍGITO ES EL 5'.",
+                "5", 3, "Mesa de la Bomba");
 
             BombConfigData cfg = AssetDatabase.LoadAssetAtPath<BombConfigData>($"{GAME_DATA_PATH}/Room2_BombConfig.asset");
             if (cfg == null)
@@ -194,28 +227,28 @@ namespace DefusalGame.Editor
             Directory.CreateDirectory(MAT_PATH);
             Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
 
-            // Paredes / suelos: colores más claros para evitar oscuridad excesiva
-            MakeMat("Mat_Room_Floor",   lit, new Color(0.45f, 0.38f, 0.30f), 0.05f);
-            MakeMat("Mat_Room_Ceiling", lit, new Color(0.72f, 0.70f, 0.65f), 0.0f);
-            MakeMat("Mat_Room_Wall",    lit, new Color(0.62f, 0.55f, 0.48f), 0.05f);
-            MakeMat("Mat_Room_Wall2",   lit, new Color(0.55f, 0.58f, 0.62f), 0.05f);
-            MakeMat("Mat_WoodTrim",     lit, new Color(0.55f, 0.38f, 0.22f), 0.2f);
-            MakeMat("Mat_PaperNote",    lit, new Color(0.98f, 0.96f, 0.88f), 0.0f);
-            MakeMat("Mat_NoteGlow",     lit, new Color(1.0f,  0.92f, 0.40f), 0.0f);   // amarillo para indicadores
-            MakeMat("Mat_TacticalCase",  lit, new Color(0.20f, 0.22f, 0.22f), 0.3f);
-            MakeMat("Mat_KeypadButton",  lit, new Color(0.28f, 0.32f, 0.32f), 0.4f);
-            MakeMat("Mat_C4Explosive",   lit, new Color(0.80f, 0.22f, 0.18f), 0.1f);
-            MakeMat("Mat_CircuitBoard",  lit, new Color(0.18f, 0.42f, 0.25f), 0.3f);
+            MakeMat("Mat_Room_Floor",    lit, new Color(0.20f, 0.18f, 0.16f), 0.20f);
+            MakeMat("Mat_Room_Ceiling",  lit, new Color(0.25f, 0.23f, 0.22f), 0.05f);
+            MakeMat("Mat_Room_Wall",     lit, new Color(0.32f, 0.30f, 0.28f), 0.10f);
+            MakeMat("Mat_WoodTrim",      lit, new Color(0.35f, 0.22f, 0.12f), 0.25f);
+            MakeMat("Mat_PaperNote",     lit, new Color(0.98f, 0.96f, 0.88f), 0.05f);
+            MakeMat("Mat_NoteGlow",      lit, new Color(1.0f,  0.92f, 0.40f), 0.0f);
+            MakeMat("Mat_TacticalCase",  lit, new Color(0.18f, 0.20f, 0.20f), 0.35f);
+            MakeMat("Mat_KeypadButton",  lit, new Color(0.26f, 0.28f, 0.30f), 0.40f);
+            MakeMat("Mat_C4Explosive",   lit, new Color(0.80f, 0.22f, 0.18f), 0.10f);
+            MakeMat("Mat_CircuitBoard",  lit, new Color(0.16f, 0.40f, 0.22f), 0.30f);
 
-            // Meshy AI con texturas (si existen)
-            MakeTexMat("Mat_Meshy_Cuarto2",    $"{OBJ_PATH}/cuarto2/Meshy_AI_The_Investigation_Roo_0917134539_texture_obj/Meshy_AI_The_Investigation_Roo_0917134539_texture.png", lit, new Color(0.35f, 0.30f, 0.25f));
-            MakeTexMat("Mat_Meshy_Cama",       $"{OBJ_PATH}/cama/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture_obj/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture.png",   lit, new Color(0.40f, 0.32f, 0.22f));
-            MakeTexMat("Mat_Meshy_Mueblesito", $"{OBJ_PATH}/mueblesito/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture_obj/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture.png", lit, new Color(0.45f, 0.34f, 0.20f));
-            MakeTexMat("Mat_Meshy_Retrato",    $"{OBJ_PATH}/retrato/Meshy_AI_The_Faded_Duchess_0917125445_texture_obj/Meshy_AI_The_Faded_Duchess_0917125445_texture.png",    lit, new Color(0.50f, 0.42f, 0.32f));
-            MakeTexMat("Mat_Meshy_Libros",     $"{OBJ_PATH}/Libros/Meshy_AI_Ornate_Book_Stack_0917121445_texture_obj/Meshy_AI_Ornate_Book_Stack_0917121445_texture.png",     lit, new Color(0.40f, 0.25f, 0.15f));
-            MakeTexMat("Mat_Meshy_LivingRoom", $"{OBJ_PATH}/livingroommeshy/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture_obj/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture.png", lit, new Color(0.20f, 0.22f, 0.28f));
-            MakeTexMat("Mat_Meshy_Pasillo",    $"{OBJ_PATH}/pasilloo/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture_obj/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture.png",  lit, new Color(0.22f, 0.26f, 0.34f));
-            MakeTexMat("Mat_Meshy_SalaDeEstar",$"{OBJ_PATH}/saladeestar/Meshy_AI_Shadowed_Parlor_0923190159_texture_obj/Meshy_AI_Shadowed_Parlor_0923190159_texture.png",   lit, new Color(0.18f, 0.18f, 0.22f));
+            // Materiales de los 4 Cuartos Meshy AI con sus texturas completas
+            MakeTexMat("Mat_Meshy_Cuarto2",     TEX_CUARTO2,     lit, new Color(0.35f, 0.30f, 0.25f));
+            MakeTexMat("Mat_Meshy_Pasillo",     TEX_PASILLO,     lit, new Color(0.22f, 0.26f, 0.34f));
+            MakeTexMat("Mat_Meshy_LivingRoom",  TEX_LIVINGROOM,  lit, new Color(0.25f, 0.24f, 0.28f));
+            MakeTexMat("Mat_Meshy_SalaDeEstar", TEX_SALADEESTAR, lit, new Color(0.28f, 0.25f, 0.22f));
+
+            // Materiales de Props Meshy
+            MakeTexMat("Mat_Meshy_Cama",        TEX_CAMA,        lit, new Color(0.40f, 0.32f, 0.22f));
+            MakeTexMat("Mat_Meshy_Mueblesito",  TEX_MUEBLESITO,  lit, new Color(0.45f, 0.34f, 0.20f));
+            MakeTexMat("Mat_Meshy_Retrato",     TEX_RETRATO,     lit, new Color(0.50f, 0.42f, 0.32f));
+            MakeTexMat("Mat_Meshy_Libros",      TEX_LIBROS,      lit, new Color(0.40f, 0.25f, 0.15f));
 
             AssetDatabase.SaveAssets();
         }
@@ -251,7 +284,10 @@ namespace DefusalGame.Editor
                 m.SetColor("_BaseColor", fallback);
                 m.SetColor("_Color", fallback);
             }
-            m.SetFloat("_Smoothness", 0.2f);
+            m.SetFloat("_Smoothness", 0.18f);
+            m.SetFloat("_Cull", 0f); // 0 = Off (Double Sided - renderiza caras interiores y exteriores)
+            m.doubleSidedGI = true;
+            m.SetFloat("_ReceiveShadows", 1f);
             EditorUtility.SetDirty(m);
             return m;
         }
@@ -260,233 +296,208 @@ namespace DefusalGame.Editor
             AssetDatabase.LoadAssetAtPath<Material>($"{MAT_PATH}/{name}.mat");
 
         // ═════════════════════════════════════════════════════════════════════════
-        // ARQUITECTURA COMPLETA: 3 CUARTOS CERRADOS + PASILLOS
+        // ARQUITECTURA: 4 CUARTOS MESHY AI CONECTADOS DE FORMA DIRECTA Y NATURAL
         // ═════════════════════════════════════════════════════════════════════════
         //
-        // Layout (vista desde arriba) — escala humana (~3m altura, salas ~8×6m):
+        // Layout:
         //
-        //   ┌──────────────┐
-        //   │  SALA 2      │   Z: -8..-14
-        //   │  El Atrio    │
-        //   └──────┬───────┘
-        //          │ Pasillo Z (4×3)
-        //   ┌──────┴───────┐      ┌─────────────┐
-        //   │  SALA 1      ├──────┤  SALA 3     │
-        //   │  Bomba       │PasX  │  Despacho   │
-        //   └──────────────┘      └─────────────┘
-        //   Z: -3..3 / X:-4..4   X: 8..16 / Z:-3..3
+        //          ┌──────────────────────┐
+        //          │   SALA 2: EL ATRIO   │   (livingroommeshy a escala 3.5x, rot 180°)
+        //          │   Z: -12.9 .. -8.67  │   Doble puerta Norte abierta hacia pasillo
+        //          └──────────┬───────────┘
+        //                     │
+        //          ┌──────────┴───────────┐
+        //          │  PASILLO Z CONECTOR  │   (pasilloo a escala 3.2x, rot 0°)
+        //          │   Z: -8.67 .. -3.03  │   Arco Norte y Arco Sur continuos y abiertos
+        //          └──────────┬───────────┘
+        //                     │
+        //   ┌─────────────────┴────┐┌──────────────────────┐
+        //   │ SALA 1: CÁMARA BOMBA ││  SALA 3: EL DESPACHO │
+        //   │   Z: -3.0 .. +2.8    ││   X: 3.1 .. 7.3      │
+        //   │ (cuarto2 rot 180°)   ││ (saladeestar rot 90°)│
+        //   │ Abertura Sur y Este  ││ Doble puerta Oeste   │
+        //   └──────────────────────┘└──────────────────────┘
         //
-        private static void BuildFullArchitecture(GameObject root)
+        private static TextMeshPro BuildFullArchitecture(GameObject root)
         {
             GameObject env = new GameObject("Environment_Room2");
             env.transform.SetParent(root.transform, false);
 
-            // ── SALA 1: Cámara de la Bomba ──────────────────────────────────────
-            // 8 ancho (X:-4..4), 6 fondo (Z:-3..3), 3.2m altura
-            BuildRoom(env, "Sala1_Bomba",
-                center: new Vector3(0f, 0f, 0f), roomW: 8f, roomD: 6f, wallH: 3.2f,
-                doorS: true, doorN: false, doorE: true, doorW: false);
+            Material matWood  = Mat("Mat_WoodTrim");
+            Material matFloor = Mat("Mat_Room_Floor");
 
-            // Mesh cuarto2 como decoración de pared/suelo
-            PlaceMesh(env, "Mesh_Cuarto2",
-                $"{OBJ_PATH}/cuarto2/Meshy_AI_The_Investigation_Roo_0917134539_texture_obj/Meshy_AI_The_Investigation_Roo_0917134539_texture.obj",
-                "Mat_Meshy_Cuarto2",
-                new Vector3(0f, 0f, 0f), Quaternion.identity, new Vector3(1.4f, 1.4f, 1.4f));
+            // ── 1. SALA 1: Cámara de la Bomba (cuarto2) ───────────────────────────
+            // Scale: 3.2, Rot: 180°, Pos: (0, 2.75, 0).
+            // Aberturas naturales: Sur (hacia Pasillo Z) y Este (hacia Sala 3).
+            // Paredes decoradas sólidas con ventanas y muebles: Norte y Oeste.
+            SpawnRoomModel(env, "Room_Cuarto2_Bomba", OBJ_CUARTO2, "Mat_Meshy_Cuarto2",
+                new Vector3(0f, 2.75f, 0f), Quaternion.Euler(0f, 180f, 0f), 3.2f);
 
-            // ── PASILLO Z: Sala1 → Sala2 ─────────────────────────────────────────
-            // 4 ancho (X:-2..2), 5 fondo (Z: -8..-3), 3.2m altura
-            BuildRoom(env, "PasilloZ",
-                center: new Vector3(0f, 0f, -5.5f), roomW: 4f, roomD: 5f, wallH: 3.2f,
-                doorS: true, doorN: true, doorE: false, doorW: false);
+            // Cartel Informativo de Misión montado sobre la pared Oeste de Sala 1 (junto a la terminal de guardado)
+            GameObject board = Box(env, "Mission_Board", new Vector3(-2.95f, 1.85f, 1.10f), new Vector3(2.2f, 1.2f, 0.04f), Mat("Mat_TacticalCase"));
+            board.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            TextMeshPro boardTMP = MakeTermTMP(board, "Board_Text", new Vector3(0f, 0f, -0.035f), 0.012f, 2.2f, Color.white,
+                "<color=#FFCC00><b>MISIÓN: DESACTIVA LA BOMBA C4</b></color>\n\n" +
+                "<size=85%>1. Explora las 3 salas comunicadas directamente por sus puertas y arcos.\n" +
+                "2. Encuentra las <b>4 pistas</b> con códigos numéricos.\n" +
+                "3. Introduce la secuencia de 4 dígitos en el teclado táctico.\n" +
+                "4. Guarda tu progreso en la Terminal de Guardado o tecla <b>[G]</b>.</size>",
+                new Vector2(170f, 90f));
+            boardTMP.alignment = TextAlignmentOptions.TopLeft;
 
-            PlaceMesh(env, "Mesh_Pasillo",
-                $"{OBJ_PATH}/pasilloo/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture_obj/Meshy_AI_Blue_Parlor_Overhead_0923185946_texture.obj",
-                "Mat_Meshy_Pasillo",
-                new Vector3(0f, 0f, -5.5f), Quaternion.identity, new Vector3(0.8f, 0.8f, 0.8f));
+            // ── 2. PASILLO Z CONECTOR: Sala 1 <-> Sala 2 (pasilloo) ────────────────
+            // Scale: 3.2, Rot: 0° (Quaternion.identity), Pos: (0, 2.67, -5.856).
+            // Arco Norte (Z = -3.03) acoplado perfectamente a la abertura Sur de Sala 1.
+            // Arco Sur (Z = -8.67) acoplado perfectamente a la doble puerta de Sala 2.
+            SpawnRoomModel(env, "Room_Pasillo_Z", OBJ_PASILLO, "Mat_Meshy_Pasillo",
+                new Vector3(0f, 2.67f, -5.856f), Quaternion.identity, 3.2f);
 
-            // ── SALA 2: El Atrio ────────────────────────────────────────────────
-            // 8 ancho (X:-4..4), 6 fondo (Z:-8..-14), 3.2m altura
-            BuildRoom(env, "Sala2_Atrio",
-                center: new Vector3(0f, 0f, -11f), roomW: 8f, roomD: 6f, wallH: 3.2f,
-                doorS: false, doorN: true, doorE: false, doorW: false);
+            // ── 3. SALA 2: El Atrio / Dormitorio (livingroommeshy) ───────────────────
+            // Scale: 3.5, Rot: 180°, Pos: (0, 1.72, -10.70).
+            // Doble puerta en Z = -8.67 mirando al Norte hacia el arco del Pasillo Z.
+            SpawnRoomModel(env, "Room_LivingRoom_Atrio", OBJ_LIVINGROOM, "Mat_Meshy_LivingRoom",
+                new Vector3(0f, 1.72f, -10.70f), Quaternion.Euler(0f, 180f, 0f), 3.5f);
 
-            PlaceMesh(env, "Mesh_LivingRoom",
-                $"{OBJ_PATH}/livingroommeshy/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture_obj/Meshy_AI_Dark_Atrium_Overlook_0922163706_texture.obj",
-                "Mat_Meshy_LivingRoom",
-                new Vector3(0f, 0f, -11f), Quaternion.identity, new Vector3(1.0f, 1.0f, 1.0f));
+            // Cama rústica en Sala 2
+            PlacePropMesh(env, "Prop_Cama", OBJ_CAMA, "Mat_Meshy_Cama",
+                new Vector3(1.8f, 0.49f, -10.70f), Quaternion.Euler(0f, -90f, 0f), new Vector3(1.1f, 1.1f, 1.1f),
+                new Vector3(1.6f, 0.9f, 2.0f), new Vector3(0f, 0.45f, 0f));
 
-            // Cama en Sala 2
-            PlaceMesh(env, "Prop_Cama",
-                $"{OBJ_PATH}/cama/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture_obj/Meshy_AI_Rustic_Celestial_Bed_0917123520_texture.obj",
-                "Mat_Meshy_Cama",
-                new Vector3(2.5f, 0f, -12.5f), Quaternion.Euler(0f, -90f, 0f), new Vector3(1.0f, 1.0f, 1.0f));
+            // Retrato en pared Oeste de Sala 2 (Nota 2 se ubica justo al lado)
+            PlacePropMesh(env, "Prop_Retrato", OBJ_RETRATO, "Mat_Meshy_Retrato",
+                new Vector3(-3.15f, 1.80f, -10.70f), Quaternion.Euler(0f, 90f, 0f), new Vector3(0.75f, 0.75f, 0.75f));
 
-            // Retrato en pared Oeste de Sala 2 (nota 2 pegada aquí)
-            PlaceMesh(env, "Prop_Retrato",
-                $"{OBJ_PATH}/retrato/Meshy_AI_The_Faded_Duchess_0917125445_texture_obj/Meshy_AI_The_Faded_Duchess_0917125445_texture.obj",
-                "Mat_Meshy_Retrato",
-                new Vector3(-3.6f, 1.5f, -10.5f), Quaternion.Euler(0f, 90f, 0f), new Vector3(0.8f, 0.8f, 0.8f));
+            // ── 4. SALA 3: El Despacho / Salón (saladeestar) ────────────────────────
+            // Scale: 3.5, Rot: 90°, Pos: (5.15, 1.72, 0).
+            // Doble puerta en X = 3.12 mirando al Oeste hacia la abertura Este de Sala 1.
+            SpawnRoomModel(env, "Room_SalaDeEstar_Despacho", OBJ_SALADEESTAR, "Mat_Meshy_SalaDeEstar",
+                new Vector3(5.15f, 1.72f, 0f), Quaternion.Euler(0f, 90f, 0f), 3.5f);
 
-            // ── PASILLO X: Sala1 → Sala3 ─────────────────────────────────────────
-            // 5 largo (X:4..9), 3 fondo (Z:-1.5..1.5), 3.2m altura
-            BuildRoom(env, "PasilloX",
-                center: new Vector3(6.5f, 0f, 0f), roomW: 5f, roomD: 3f, wallH: 3.2f,
-                doorS: false, doorN: false, doorE: true, doorW: true);
+            // Mueble aparador contra la pared Norte de Sala 3 (Nota 1 encima)
+            PlacePropMesh(env, "Prop_Mueblesito", OBJ_MUEBLESITO, "Mat_Meshy_Mueblesito",
+                new Vector3(5.15f, 0.855f, 2.65f), Quaternion.Euler(0f, 180f, 0f), new Vector3(0.95f, 0.95f, 0.95f),
+                new Vector3(1.5f, 1.7f, 0.6f), new Vector3(0f, 0.85f, 0f));
 
-            // ── SALA 3: El Despacho / Salón ─────────────────────────────────────
-            // 8 ancho (X:9..17), 6 fondo (Z:-3..3), 3.2m altura
-            BuildRoom(env, "Sala3_Despacho",
-                center: new Vector3(13f, 0f, 0f), roomW: 8f, roomD: 6f, wallH: 3.2f,
-                doorS: false, doorN: false, doorE: false, doorW: true);
+            // Mesa de estudio en Sala 3
+            BuildTable(env, "Table_Study", new Vector3(5.15f, 0f, -1.8f), matWood);
 
-            PlaceMesh(env, "Mesh_SalaDeEstar",
-                $"{OBJ_PATH}/saladeestar/Meshy_AI_Shadowed_Parlor_0923190159_texture_obj/Meshy_AI_Shadowed_Parlor_0923190159_texture.obj",
-                "Mat_Meshy_SalaDeEstar",
-                new Vector3(13f, 0f, 0f), Quaternion.identity, new Vector3(1.0f, 1.0f, 1.0f));
+            // Pila de libros ornamentados sobre la mesa de estudio (Nota 3 encima)
+            PlacePropMesh(env, "Prop_Libros", OBJ_LIBROS, "Mat_Meshy_Libros",
+                new Vector3(5.35f, 0.80f, -1.8f), Quaternion.Euler(0f, 25f, 0f), new Vector3(0.35f, 0.35f, 0.35f));
 
-            // Mueblesito en Sala 3 (nota 1 encima)
-            PlaceMesh(env, "Prop_Mueblesito",
-                $"{OBJ_PATH}/mueblesito/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture_obj/Meshy_AI_Weathered_Wooden_Hutc_0917124533_texture.obj",
-                "Mat_Meshy_Mueblesito",
-                new Vector3(10f, 0f, -1.5f), Quaternion.Euler(0f, 90f, 0f), new Vector3(0.9f, 0.9f, 0.9f));
-
-            // Libros en Sala 3 (nota 3 encima)
-            PlaceMesh(env, "Prop_Libros",
-                $"{OBJ_PATH}/Libros/Meshy_AI_Ornate_Book_Stack_0917121445_texture_obj/Meshy_AI_Ornate_Book_Stack_0917121445_texture.obj",
-                "Mat_Meshy_Libros",
-                new Vector3(16f, 0.4f, 2f), Quaternion.Euler(0f, 20f, 0f), new Vector3(0.45f, 0.45f, 0.45f));
-
-            // ── SUELO MAESTRO (colisionador que cubre todo el layout) ────────────
-            // Cubre: X[-4..17] Z[-14..3]
+            // ── 5. SUELO MAESTRO Y COLISIONES PERIMETRALES ───────────────────────
+            // Suelo plano continuo para todo el recinto en Y=0.00m (evita cualquier tropiezo o flotación)
             Box(env, "Master_Floor_Collider",
-                new Vector3(6.5f, -0.12f, -5.5f),
-                new Vector3(22f, 0.2f, 18f), null, withRenderer: false);
+                new Vector3(2.5f, -0.1f, -5.0f),
+                new Vector3(16f, 0.2f, 20f), null, withRenderer: false);
+
+            CreatePerimeterColliders(env);
+
+            return boardTMP;
         }
 
-        /// <summary>
-        /// Construye un cuarto cerrado. doorS/N/E/W = tiene hueco de puerta en esa pared.
-        /// </summary>
-        private static void BuildRoom(GameObject parent, string roomName,
-            Vector3 center, float roomW, float roomD, float wallH,
-            bool doorS, bool doorN, bool doorE, bool doorW)
+        private static void CreatePerimeterColliders(GameObject parent)
         {
-            GameObject room = new GameObject(roomName);
-            room.transform.SetParent(parent.transform, false);
+            GameObject colRoot = new GameObject("Invisible_Perimeter_Colliders");
+            colRoot.transform.SetParent(parent.transform, false);
 
-            float cx = center.x, cz = center.z, y0 = center.y;
-            float hw = roomW * 0.5f, hd = roomD * 0.5f;
+            // Bounding walls exteriores para evitar salir del mapa sin obstruir vanos ni puertas internas:
+            // Límite Oeste total (Sala 1 + Pasillo Z: X = -3.25m, Z de -8.7m a +3.0m)
+            CreateInvisibleWall(colRoot, "Wall_Outer_West", new Vector3(-3.25f, 1.6f, -2.85f), new Vector3(0.3f, 3.2f, 12.0f));
 
-            Material mF = Mat("Mat_Room_Floor");
-            Material mC = Mat("Mat_Room_Ceiling");
-            Material mW = Mat("Mat_Room_Wall");
-            Material mW2= Mat("Mat_Room_Wall2");
-            const float T = 0.25f; // espesor de pared
+            // Límite Norte de Sala 1 (Z = +2.95m, X de -3.2m a +3.1m)
+            CreateInvisibleWall(colRoot, "Wall_Sala1_North", new Vector3(0f, 1.6f, 2.95f), new Vector3(6.4f, 3.2f, 0.3f));
 
-            // Suelo y techo
-            Box(room, "Floor",   new Vector3(cx, y0,          cz), new Vector3(roomW, T, roomD), mF);
-            Box(room, "Ceiling", new Vector3(cx, y0 + wallH,  cz), new Vector3(roomW, T, roomD), mC);
+            // Límite Oeste de Sala 2 (X = -3.45m, Z de -12.9m a -8.7m)
+            CreateInvisibleWall(colRoot, "Wall_Sala2_West", new Vector3(-3.45f, 1.6f, -10.8f), new Vector3(0.3f, 3.2f, 4.4f));
 
-            // Paredes Norte/Sur (alineadas en X, normal en Z)
-            BuildWallWithDoor(room, "Wall_N", cx, y0, cz + hd, roomW, wallH, T, true,  doorN, mW);
-            BuildWallWithDoor(room, "Wall_S", cx, y0, cz - hd, roomW, wallH, T, true,  doorS, mW);
-            // Paredes Este/Oeste (alineadas en Z, normal en X)
-            BuildWallWithDoor(room, "Wall_E", cx + hw, y0, cz, roomD, wallH, T, false, doorE, mW2);
-            BuildWallWithDoor(room, "Wall_W", cx - hw, y0, cz, roomD, wallH, T, false, doorW, mW2);
+            // Límite Sur de Sala 2 (Z = -12.95m, X de -3.4m a +3.4m)
+            CreateInvisibleWall(colRoot, "Wall_Sala2_South", new Vector3(0f, 1.6f, -12.95f), new Vector3(7.0f, 3.2f, 0.3f));
+
+            // Límite Este de Sala 2 (X = +3.45m, Z de -12.9m a -8.7m)
+            CreateInvisibleWall(colRoot, "Wall_Sala2_East", new Vector3(3.45f, 1.6f, -10.8f), new Vector3(0.3f, 3.2f, 4.4f));
+
+            // Límite Este del Pasillo Z (X = +3.15m, Z de -8.7m a -3.4m)
+            CreateInvisibleWall(colRoot, "Wall_PasilloZ_East", new Vector3(3.15f, 1.6f, -6.0f), new Vector3(0.3f, 3.2f, 5.5f));
+
+            // Límite Norte de Sala 3 (Z = +3.45m, X de +3.1m a +7.4m)
+            CreateInvisibleWall(colRoot, "Wall_Sala3_North", new Vector3(5.25f, 1.6f, 3.45f), new Vector3(4.4f, 3.2f, 0.3f));
+
+            // Límite Este de Sala 3 (X = +7.45m, Z de -3.4m a +3.4m)
+            CreateInvisibleWall(colRoot, "Wall_Sala3_East", new Vector3(7.45f, 1.6f, 0f), new Vector3(0.3f, 3.2f, 7.0f));
+
+            // Límite Sur de Sala 3 (Z = -3.45m, X de +3.1m a +7.4m)
+            CreateInvisibleWall(colRoot, "Wall_Sala3_South", new Vector3(5.25f, 1.6f, -3.45f), new Vector3(4.4f, 3.2f, 0.3f));
         }
 
-        /// <summary>
-        /// Construye una sección de pared, opcionalmente con vano de puerta centrado (2m × 2.2m).
-        /// isZAligned=true → la pared se extiende en X (paredes Norte/Sur).
-        /// isZAligned=false → la pared se extiende en Z (paredes Este/Oeste).
-        /// </summary>
-        private static void BuildWallWithDoor(GameObject parent, string wName,
-            float cx, float y0, float cz, float wallLen, float wallH, float wallThick,
-            bool isZAligned, bool hasDoor, Material mat)
+        private static void CreateInvisibleWall(GameObject parent, string name, Vector3 pos, Vector3 size)
         {
-            const float DW = 1.8f;   // ancho del vano de puerta
-            const float DH = 2.2f;   // alto del vano de puerta
+            GameObject w = Box(parent, name, pos, size, null, withRenderer: false);
+        }
 
-            if (!hasDoor)
-            {
-                // Pared sólida sin puerta
-                if (isZAligned)
-                    Box(parent, wName, new Vector3(cx, y0 + wallH * 0.5f, cz), new Vector3(wallLen, wallH, wallThick), mat);
-                else
-                    Box(parent, wName, new Vector3(cx, y0 + wallH * 0.5f, cz), new Vector3(wallThick, wallH, wallLen), mat);
-                return;
-            }
-
-            // Pared con hueco de puerta central
-            float sideLen = (wallLen - DW) * 0.5f;
-            float sideOff = sideLen * 0.5f + DW * 0.5f;
-
-            if (isZAligned) // Norte / Sur
-            {
-                Box(parent, wName + "_L",   new Vector3(cx - sideOff, y0 + wallH * 0.5f, cz), new Vector3(sideLen, wallH, wallThick), mat);
-                Box(parent, wName + "_R",   new Vector3(cx + sideOff, y0 + wallH * 0.5f, cz), new Vector3(sideLen, wallH, wallThick), mat);
-                Box(parent, wName + "_Top", new Vector3(cx, y0 + DH + (wallH - DH) * 0.5f, cz), new Vector3(DW, wallH - DH, wallThick), mat);
-            }
-            else // Este / Oeste
-            {
-                Box(parent, wName + "_L",   new Vector3(cx, y0 + wallH * 0.5f, cz - sideOff), new Vector3(wallThick, wallH, sideLen), mat);
-                Box(parent, wName + "_R",   new Vector3(cx, y0 + wallH * 0.5f, cz + sideOff), new Vector3(wallThick, wallH, sideLen), mat);
-                Box(parent, wName + "_Top", new Vector3(cx, y0 + DH + (wallH - DH) * 0.5f, cz), new Vector3(wallThick, wallH - DH, DW), mat);
-            }
+        private static GameObject BuildTable(GameObject parent, string name, Vector3 pos, Material matWood, float width = 1.5f, float depth = 0.85f)
+        {
+            GameObject table = new GameObject(name);
+            table.transform.SetParent(parent.transform, false);
+            table.transform.localPosition = pos;
+            Box(table, "Top",    new Vector3(0f, 0.76f, 0f), new Vector3(width, 0.06f, depth), matWood);
+            float hx = (width * 0.5f) - 0.08f;
+            float hz = (depth * 0.5f) - 0.08f;
+            Box(table, "Leg_FL", new Vector3( hx, 0.37f,  hz), new Vector3(0.08f, 0.74f, 0.08f), matWood);
+            Box(table, "Leg_FR", new Vector3(-hx, 0.37f,  hz), new Vector3(0.08f, 0.74f, 0.08f), matWood);
+            Box(table, "Leg_BL", new Vector3( hx, 0.37f, -hz), new Vector3(0.08f, 0.74f, 0.08f), matWood);
+            Box(table, "Leg_BR", new Vector3(-hx, 0.37f, -hz), new Vector3(0.08f, 0.74f, 0.08f), matWood);
+            return table;
         }
 
         // ═════════════════════════════════════════════════════════════════════════
-        // ILUMINACIÓN — URP necesita intensidades altas (8-20) para cerrar cuartos
+        // ILUMINACIÓN CÁLIDA E INMERSIVA
         // ═════════════════════════════════════════════════════════════════════════
         private static void SetupLighting(GameObject root)
         {
-            // Luz ambiental plana y clara (casi blanca) — evita que las sombras sean negras
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.55f, 0.52f, 0.48f);
+            RenderSettings.ambientLight = new Color(0.68f, 0.65f, 0.60f);
 
             GameObject rig = new GameObject("Lighting_Rig");
             rig.transform.SetParent(root.transform, false);
 
-            // ── Luz Direccional (relleno general) ────────────────────────────────
             GameObject dirGo = new GameObject("Dir_Light_Fill");
             dirGo.transform.SetParent(rig.transform, false);
             dirGo.transform.localRotation = Quaternion.Euler(50f, -30f, 0f);
             Light dir = dirGo.AddComponent<Light>();
             dir.type      = LightType.Directional;
-            dir.color     = new Color(1.0f, 0.95f, 0.88f);
-            dir.intensity = 1.2f;
-            dir.shadows   = LightShadows.None; // sin sombras en las rooms cerradas
+            dir.color     = new Color(1.0f, 0.98f, 0.92f);
+            dir.intensity = 1.0f;
+            dir.shadows   = LightShadows.None;
 
-            // ── Luces de Sala — intensidad alta para URP ─────────────────────────
-            // Sala 1: Cámara de la Bomba  (centro ≈ 0, 2.8, 1)
-            AddLight(rig, "Light_Sala1_A", new Vector3(-2f, 2.8f,  3f),  LightType.Point, new Color(1.0f, 0.92f, 0.80f), 12f, 14f);
-            AddLight(rig, "Light_Sala1_B", new Vector3( 2f, 2.8f, -1f),  LightType.Point, new Color(1.0f, 0.92f, 0.80f), 10f, 14f);
+            // Sala 1: Cámara de la Bomba
+            AddLight(rig, "Light_Sala1_A", new Vector3(-1.5f, 2.6f,  0.8f), LightType.Point, new Color(1.0f, 0.94f, 0.82f), 12f, 10f);
+            AddLight(rig, "Light_Sala1_B", new Vector3( 1.5f, 2.6f, -0.8f), LightType.Point, new Color(1.0f, 0.94f, 0.82f), 12f, 10f);
 
-            // Pasillo Z (Sala1→Sala2)
-            AddLight(rig, "Light_PasilloZ", new Vector3(0f, 2.5f, -6.5f), LightType.Point, new Color(0.85f, 0.90f, 1.0f), 10f, 8f);
-
-            // Sala 2: El Atrio
-            AddLight(rig, "Light_Sala2_A", new Vector3(-2f, 2.8f,-12f),  LightType.Point, new Color(1.0f, 0.88f, 0.75f), 12f, 14f);
-            AddLight(rig, "Light_Sala2_B", new Vector3( 2f, 2.8f,-15f),  LightType.Point, new Color(1.0f, 0.88f, 0.75f), 10f, 14f);
-
-            // Pasillo X (Sala1→Sala3)
-            AddLight(rig, "Light_PasilloX", new Vector3(9f, 2.5f, 1f),   LightType.Point, new Color(0.85f, 0.88f, 1.0f), 10f, 8f);
-
-            // Sala 3: El Despacho
-            AddLight(rig, "Light_Sala3_A", new Vector3(14f, 2.8f, 3f),   LightType.Point, new Color(1.0f, 0.90f, 0.75f), 12f, 14f);
-            AddLight(rig, "Light_Sala3_B", new Vector3(20f, 2.8f,-1f),   LightType.Point, new Color(1.0f, 0.90f, 0.75f), 10f, 14f);
-
-            // ── Foco dramático sobre la mesa de la bomba ─────────────────────────
+            // Foco directo sobre la mesa de la bomba
             GameObject spot = new GameObject("Bomb_Spotlight");
             spot.transform.SetParent(rig.transform, false);
-            spot.transform.localPosition = new Vector3(0f, 3.2f, 2.2f);
-            spot.transform.localRotation = Quaternion.Euler(80f, 0f, 0f);
+            spot.transform.localPosition = new Vector3(0.1f, 3.2f, -0.55f);
+            spot.transform.localRotation = Quaternion.Euler(85f, 0f, 0f);
             Light sl = spot.AddComponent<Light>();
             sl.type       = LightType.Spot;
             sl.spotAngle  = 55f;
             sl.color      = new Color(1f, 0.98f, 0.90f);
-            sl.intensity  = 15f;
-            sl.range      = 6f;
+            sl.intensity  = 14f;
+            sl.range      = 5f;
             sl.shadows    = LightShadows.None;
+
+            // Pasillo Z
+            AddLight(rig, "Light_PasilloZ_1", new Vector3(0f, 2.5f, -4.5f), LightType.Point, new Color(0.85f, 0.92f, 1.0f), 10f, 8f);
+            AddLight(rig, "Light_PasilloZ_2", new Vector3(0f, 2.5f, -7.2f), LightType.Point, new Color(0.85f, 0.92f, 1.0f), 10f, 8f);
+
+            // Sala 2: El Atrio
+            AddLight(rig, "Light_Sala2_A", new Vector3(-1.6f, 2.6f, -10.70f), LightType.Point, new Color(1.0f, 0.90f, 0.80f), 12f, 10f);
+            AddLight(rig, "Light_Sala2_B", new Vector3( 1.6f, 2.6f, -10.70f), LightType.Point, new Color(1.0f, 0.90f, 0.80f), 12f, 10f);
+
+            // Sala 3: El Despacho
+            AddLight(rig, "Light_Sala3_A", new Vector3(5.15f, 2.6f,  1.4f), LightType.Point, new Color(1.0f, 0.92f, 0.82f), 12f, 10f);
+            AddLight(rig, "Light_Sala3_B", new Vector3(5.15f, 2.6f, -1.4f), LightType.Point, new Color(1.0f, 0.92f, 0.82f), 12f, 10f);
         }
 
         private static Light AddLight(GameObject parent, string n, Vector3 pos, LightType t, Color c, float intensity, float range)
@@ -504,7 +515,7 @@ namespace DefusalGame.Editor
         }
 
         // ═════════════════════════════════════════════════════════════════════════
-        // BOMBA TÁCTICA
+        // BOMBA TÁCTICA C4
         // ═════════════════════════════════════════════════════════════════════════
         private static GameObject BuildTacticalBomb(GameObject root)
         {
@@ -514,31 +525,24 @@ namespace DefusalGame.Editor
             Material matPCB    = Mat("Mat_CircuitBoard");
             Material matWood   = Mat("Mat_WoodTrim");
 
-            // Mesa de la bomba (en Sala 1)
-            GameObject table = new GameObject("Table_BombStation");
-            table.transform.SetParent(root.transform, false);
-            table.transform.localPosition = new Vector3(0f, 0f, 2f);
-            Box(table, "Top",    new Vector3(0f, 0.76f, 0f), new Vector3(1.8f, 0.06f, 1.1f), matWood);
-            Box(table, "Leg_FL", new Vector3( 0.8f, 0.37f,  0.45f), new Vector3(0.08f, 0.74f, 0.08f), matWood);
-            Box(table, "Leg_FR", new Vector3(-0.8f, 0.37f,  0.45f), new Vector3(0.08f, 0.74f, 0.08f), matWood);
-            Box(table, "Leg_BL", new Vector3( 0.8f, 0.37f, -0.45f), new Vector3(0.08f, 0.74f, 0.08f), matWood);
-            Box(table, "Leg_BR", new Vector3(-0.8f, 0.37f, -0.45f), new Vector3(0.08f, 0.74f, 0.08f), matWood);
+            BuildTable(root, "Table_BombStation", new Vector3(0f, 0f, -0.55f), matWood, 1.5f, 0.85f);
 
-            // Bomba sobre la mesa
             GameObject bombRoot = new GameObject("Tactical_C4_Bomb");
             bombRoot.transform.SetParent(root.transform, false);
-            bombRoot.transform.localPosition = new Vector3(0.1f, 0.79f, 2f);
-            bombRoot.transform.localRotation = Quaternion.Euler(0f, 10f, 0f);
+            bombRoot.transform.localPosition = new Vector3(0.1f, 0.79f, -0.55f);
+            bombRoot.transform.localRotation = Quaternion.identity;
 
-            // Maletín
-            GameObject cBase = Box(bombRoot, "Case_Base", new Vector3(0f, 0.05f, 0f),   new Vector3(0.46f, 0.10f, 0.34f), matCase);
+            bombRoot.AddComponent<AudioSource>();
+            BombAudioSynthesizer audio = bombRoot.AddComponent<BombAudioSynthesizer>();
+            BombController ctrl = bombRoot.AddComponent<BombController>();
+
+            GameObject cBase = Box(bombRoot, "Case_Base", new Vector3(0f, 0.05f, 0f), new Vector3(0.46f, 0.10f, 0.34f), matCase);
             UnityEngine.Object.DestroyImmediate(cBase.GetComponent<Collider>());
 
             GameObject lid = Box(bombRoot, "Case_Lid", new Vector3(0f, 0.21f, 0.17f), new Vector3(0.46f, 0.24f, 0.04f), matCase);
             lid.transform.localRotation = Quaternion.Euler(15f, 0f, 0f);
             UnityEngine.Object.DestroyImmediate(lid.GetComponent<Collider>());
 
-            // C4 blocks
             for (int i = 0; i < 3; i++)
             {
                 float z = -0.08f + i * 0.08f;
@@ -546,11 +550,9 @@ namespace DefusalGame.Editor
                 UnityEngine.Object.DestroyImmediate(c4.GetComponent<Collider>());
             }
 
-            // PCB
             GameObject pcb = Box(bombRoot, "PCB", new Vector3(0.11f, 0.105f, 0f), new Vector3(0.19f, 0.015f, 0.28f), matPCB);
             UnityEngine.Object.DestroyImmediate(pcb.GetComponent<Collider>());
 
-            // Display bezel
             GameObject bezel = Box(bombRoot, "Display_Bezel", new Vector3(0.11f, 0.125f, 0.08f), new Vector3(0.17f, 0.035f, 0.08f), matCase);
             UnityEngine.Object.DestroyImmediate(bezel.GetComponent<Collider>());
 
@@ -558,11 +560,9 @@ namespace DefusalGame.Editor
             TextMeshPro codeTMP   = MakeWorldTMP(bezel, "Code_TMP",   new Vector3(0f, 0.52f, -0.025f), "_ _ _ _",  1.8f, Color.cyan);
             TextMeshPro statusTMP = MakeWorldTMP(bezel, "Status_TMP", new Vector3(0f, 0.52f,  0.036f), "DISPOSITIVO ARMADO (4 DÍGITOS)", 0.80f, Color.yellow);
 
-            // LEDs
             Light rLight = AddBombLed(bombRoot, "LED_Red",   new Vector3(0.03f, 0.13f, 0.11f), Color.red,   1.0f, true);
             Light gLight = AddBombLed(bombRoot, "LED_Green", new Vector3(0.19f, 0.13f, 0.11f), Color.green, 1.4f, false);
 
-            // Teclado 4×3
             int ilayer = LayerMask.NameToLayer("Interactable");
             if (ilayer < 0) ilayer = 0;
 
@@ -580,15 +580,18 @@ namespace DefusalGame.Editor
                 GameObject btn = Box(kpad, $"Btn_{k}", new Vector3(bx, 0.012f, bz), new Vector3(0.034f, 0.016f, 0.028f), matButton);
                 btn.layer = ilayer;
                 BoxCollider btnCol = btn.GetComponent<BoxCollider>();
-                if (btnCol != null) btnCol.size = new Vector3(0.042f, 0.030f, 0.036f);
+                if (btnCol != null)
+                {
+                    btnCol.center = new Vector3(0f, 0.4f, 0f);
+                    btnCol.size   = new Vector3(1.2f, 2.0f, 1.2f);
+                }
                 MakeWorldTMP(btn, "Key_Text", new Vector3(0f, 0.52f, 0f), k, 1.2f,
                     (k == "ENT") ? Color.green : (k == "C" ? Color.red : Color.white));
-                btn.AddComponent<BombKeypadButton>().keyValue = k;
+                BombKeypadButton kBtn = btn.AddComponent<BombKeypadButton>();
+                kBtn.keyValue = k;
+                kBtn.SetController(ctrl, k);
             }
 
-            bombRoot.AddComponent<AudioSource>();
-            BombAudioSynthesizer audio = bombRoot.AddComponent<BombAudioSynthesizer>();
-            BombController ctrl = bombRoot.AddComponent<BombController>();
             ctrl.config          = AssetDatabase.LoadAssetAtPath<BombConfigData>($"{GAME_DATA_PATH}/Room2_BombConfig.asset");
             ctrl.timerText       = timerTMP;
             ctrl.codeText        = codeTMP;
@@ -615,17 +618,8 @@ namespace DefusalGame.Editor
         }
 
         // ═════════════════════════════════════════════════════════════════════════
-        // NOTAS INTERACTIVAS — posiciones en escala humana, con luz indicadora
+        // NOTAS INTERACTIVAS (4 PISTAS NUMÉRICAS: 7 3 9 5)
         // ═════════════════════════════════════════════════════════════════════════
-        //
-        // Sala 1 (X:-4..4, Z:-3..3):
-        //   Nota 4 → sobre la mesa de la bomba:   (0.6, 0.82, 1.2)
-        // Sala 2 (X:-4..4, Z:-8..-14):
-        //   Nota 2 → sobre la cama / retrato:     (-1.0, 1.05, -11.0)
-        // Sala 3 (X:9..17, Z:-3..3):
-        //   Nota 1 → encima del mueblesito:       (10.5, 1.15, -1.5)
-        //   Nota 3 → encima de los libros:        (16.0, 0.90,  2.0)
-        //
         private static List<ClueInteractable> PlaceNotes(GameObject root)
         {
             var list = new List<ClueInteractable>();
@@ -641,19 +635,19 @@ namespace DefusalGame.Editor
 
             // Nota 1 – Sala 3, sobre el mueblesito
             list.Add(CreateNote(notesRoot, "Note_1_Mueble",
-                new Vector3(10.5f, 1.15f, -1.5f), Quaternion.Euler(0f, 20f, 0f), c1, mat));
+                new Vector3(5.15f, 1.15f, 2.45f), Quaternion.identity, c1, mat));
 
-            // Nota 2 – Sala 2, sobre la cama / pared del retrato
+            // Nota 2 – Sala 2, en la pared junto al retrato
             list.Add(CreateNote(notesRoot, "Note_2_Retrato",
-                new Vector3(-1.0f, 1.05f, -11.0f), Quaternion.Euler(0f, 0f, 0f), c2, mat));
+                new Vector3(-3.05f, 1.25f, -10.70f), Quaternion.Euler(0f, 90f, 0f), c2, mat));
 
-            // Nota 3 – Sala 3, sobre los libros
+            // Nota 3 – Sala 3, sobre la mesa de estudio junto a los libros
             list.Add(CreateNote(notesRoot, "Note_3_Libros",
-                new Vector3(16.0f, 0.90f, 2.0f), Quaternion.Euler(0f, -10f, 0f), c3, mat));
+                new Vector3(5.00f, 0.81f, -1.8f), Quaternion.Euler(0f, 10f, 0f), c3, mat));
 
-            // Nota 4 – Sala 1, sobre la mesa de la bomba
+            // Nota 4 – Sala 1, sobre la mesa de la bomba junto al maletín
             list.Add(CreateNote(notesRoot, "Note_4_Mesa",
-                new Vector3(-0.8f, 0.82f, 0.5f), Quaternion.Euler(0f, 5f, 0f), c4, mat));
+                new Vector3(-0.45f, 0.81f, -0.55f), Quaternion.Euler(0f, 5f, 0f), c4, mat));
 
             return list;
         }
@@ -664,14 +658,12 @@ namespace DefusalGame.Editor
             int ilayer = LayerMask.NameToLayer("Interactable");
             if (ilayer < 0) ilayer = 0;
 
-            // Objeto raíz de la nota
             GameObject noteObj = new GameObject(noteName);
             noteObj.transform.SetParent(parent.transform, false);
             noteObj.transform.position = worldPos;
             noteObj.transform.rotation = rot;
             noteObj.layer = ilayer;
 
-            // Visual (hoja de papel — A4, fácil de ver y clicar)
             GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Note_Mesh";
             visual.transform.SetParent(noteObj.transform, false);
@@ -681,7 +673,6 @@ namespace DefusalGame.Editor
             visual.GetComponent<Renderer>().sharedMaterial = mat;
             UnityEngine.Object.DestroyImmediate(visual.GetComponent<Collider>());
 
-            // Banda superior amarilla (indicador visual de nota interactiva)
             Material matBand = Mat("Mat_NoteGlow");
             if (matBand == null) matBand = mat;
             GameObject band = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -693,7 +684,6 @@ namespace DefusalGame.Editor
             band.GetComponent<Renderer>().sharedMaterial = matBand;
             UnityEngine.Object.DestroyImmediate(band.GetComponent<Collider>());
 
-            // Texto en la superficie
             GameObject textObj = new GameObject("Surface_Text");
             textObj.transform.SetParent(noteObj.transform, false);
             textObj.transform.localPosition = new Vector3(0f, 0.004f, 0f);
@@ -712,14 +702,12 @@ namespace DefusalGame.Editor
             surfTMP.enableWordWrapping = true;
             surfTMP.GetComponent<RectTransform>().sizeDelta = new Vector2(52f, 75f);
 
-            // Popup flotante (aparece al interactuar)
             GameObject popup = new GameObject("Inspection_Popup");
             popup.transform.SetParent(noteObj.transform, false);
             popup.transform.localPosition = new Vector3(0f, 0.45f, 0f);
             popup.transform.localScale    = new Vector3(0.005f, 0.005f, 0.005f);
             popup.SetActive(false);
 
-            // Fondo del popup
             GameObject popBg = GameObject.CreatePrimitive(PrimitiveType.Cube);
             popBg.name = "Popup_BG";
             popBg.transform.SetParent(popup.transform, false);
@@ -740,11 +728,9 @@ namespace DefusalGame.Editor
                 pDigit.text = $"<color=#FFCC00>DÍGITO DE LA BOMBA:</color> <size=130%><b>[ {clue.revealedValue} ]</b></size> (Pos #{clue.sequenceIndex + 1})";
             }
 
-            // Collider principal de la nota (para raycast desde FPSRaycastInteractor)
             BoxCollider bc = noteObj.AddComponent<BoxCollider>();
             bc.size = new Vector3(0.25f, 0.08f, 0.35f);
 
-            // Rigidbody para XR Grab (kinematic por defecto para que no salga volando por colisiones)
             Rigidbody rb = noteObj.AddComponent<Rigidbody>();
             rb.mass      = 0.1f;
             rb.useGravity = false;
@@ -753,7 +739,6 @@ namespace DefusalGame.Editor
             rb.angularDamping = 1.2f;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
 
-            // VRNoteInteractable (agarre VR)
             VRNoteInteractable vrNote = noteObj.AddComponent<VRNoteInteractable>();
             vrNote.clueData          = clue;
             vrNote.inWorldNoteText   = surfTMP;
@@ -762,12 +747,10 @@ namespace DefusalGame.Editor
             vrNote.popupBody         = pBody;
             vrNote.popupDigitHint    = pDigit;
 
-            // Antigravity Grab
             AntigravityGrabInteractable agGrab = noteObj.AddComponent<AntigravityGrabInteractable>();
             agGrab.vrNoteComponent   = vrNote;
             agGrab.floatInZeroGravity = true;
 
-            // ClueInteractable → para FPSRaycastInteractor en PC
             ClueInteractable ci     = noteObj.AddComponent<ClueInteractable>();
             ci.clueData             = clue;
             ci.inspectionCardPopup  = popup;
@@ -775,8 +758,6 @@ namespace DefusalGame.Editor
             ci.cardBodyText         = pBody;
             ci.cardDatoText         = pDigit;
 
-            // ── Luz indicadora amarilla sobre la nota (hace la nota visible) ────
-            // Se desactiva al ser recogida (Room2EscapeRoomManager lo gestiona)
             GameObject glowGo = new GameObject("Note_Glow_Light");
             glowGo.transform.SetParent(noteObj.transform, false);
             glowGo.transform.localPosition = new Vector3(0f, 0.35f, 0f);
@@ -811,10 +792,10 @@ namespace DefusalGame.Editor
             Material matCase   = Mat("Mat_TacticalCase");
             Material matButton = Mat("Mat_KeypadButton");
 
-            // Montado en pared Oeste de Sala 1
+            // Montado en pared Oeste de Sala 1 (X = -2.95m)
             GameObject termRoot = new GameObject("Save_Terminal_Console");
             termRoot.transform.SetParent(root.transform, false);
-            termRoot.transform.localPosition = new Vector3(-5.7f, 1.8f, 1f);
+            termRoot.transform.localPosition = new Vector3(-2.95f, 1.50f, 0.0f);
             termRoot.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
 
             Box(termRoot, "Chassis",      Vector3.zero,                new Vector3(0.90f, 0.70f, 0.08f), matCase);
@@ -823,7 +804,6 @@ namespace DefusalGame.Editor
             GameObject screenObj = Box(termRoot, "Screen_Glass", new Vector3(0f, 0.07f,-0.046f), new Vector3(0.80f, 0.42f, 0.01f), null, withRenderer: true);
             screenObj.GetComponent<Renderer>().material.color = new Color(0.04f, 0.07f, 0.10f, 0.95f);
 
-            // LED de estado
             GameObject ledGo = new GameObject("Status_LED");
             ledGo.transform.SetParent(termRoot.transform, false);
             ledGo.transform.localPosition = new Vector3(0.35f, 0.28f,-0.06f);
@@ -837,7 +817,6 @@ namespace DefusalGame.Editor
             TextMeshPro statusTMP  = MakeTermTMP(termRoot, "Status",  new Vector3(0f, 0.14f,-0.055f), 0.010f, 2.1f, new Color(0.2f,0.8f,1.0f), "SISTEMA OPERATIVO // EN ESPERA",               new Vector2(80f,15f));
             TextMeshPro detailsTMP = MakeTermTMP(termRoot, "Details", new Vector3(0f,-0.02f,-0.055f), 0.009f, 1.8f, new Color(0.85f,0.9f,0.95f), "",                                              new Vector2(85f,35f));
 
-            // Botón físico
             Box(termRoot, "Btn_Bracket", new Vector3(0f,-0.22f,-0.040f), new Vector3(0.42f, 0.11f, 0.04f), matCase);
             int ilayer = LayerMask.NameToLayer("Interactable");
             if (ilayer < 0) ilayer = 0;
@@ -886,21 +865,23 @@ namespace DefusalGame.Editor
         // ═════════════════════════════════════════════════════════════════════════
         // SISTEMAS: SaveManager + EscapeRoomManager + UIManager
         // ═════════════════════════════════════════════════════════════════════════
-        private static void SetupSystems(GameObject root, BombController bomb, List<ClueInteractable> notes)
+        private static Room2UIManager SetupSystems(GameObject root, BombController bomb, List<ClueInteractable> notes, TextMeshPro boardTMP)
         {
-            GameObject sys = new GameObject("Systems_Room2");
-            sys.transform.SetParent(root.transform, false);
-
-            // Save Manager
-            GameSaveManager saveMgr = sys.AddComponent<GameSaveManager>();
+            // GameSaveManager en GameObject dedicado independiente para evitar conflictos de ciclo de vida
+            GameObject saveGo = new GameObject("GameSaveManager");
+            saveGo.transform.SetParent(root.transform, false);
+            GameSaveManager saveMgr = saveGo.AddComponent<GameSaveManager>();
             saveMgr.bombController      = bomb;
             saveMgr.autoLoadOnStart     = false;
             saveMgr.autoSaveOnMilestones = true;
 
-            // Room2 Escape Room Manager
+            GameObject sys = new GameObject("Systems_Room2");
+            sys.transform.SetParent(root.transform, false);
+
             Room2EscapeRoomManager roomMgr = sys.AddComponent<Room2EscapeRoomManager>();
             roomMgr.bombController = bomb;
-            // Mapear ClueInteractable → VRNoteInteractable (están en el mismo GameObject)
+            if (boardTMP != null) roomMgr.missionBoardText = boardTMP;
+
             var vrNotes = new List<VRNoteInteractable>();
             foreach (var ci in notes)
             {
@@ -909,7 +890,6 @@ namespace DefusalGame.Editor
             }
             roomMgr.roomNotes = vrNotes;
 
-            // Room2 UI Manager (HUD + popup guardado + toast)
             Room2UIManager uiMgr = sys.AddComponent<Room2UIManager>();
             uiMgr.bomb = bomb;
             if (notes != null && notes.Count >= 4)
@@ -919,28 +899,42 @@ namespace DefusalGame.Editor
                 uiMgr.clue3 = notes[2].clueData;
                 uiMgr.clue4 = notes[3].clueData;
             }
+
+            return uiMgr;
         }
 
         // ═════════════════════════════════════════════════════════════════════════
-        // PLAYER: PC Fallback + XR Origin
+        // PLAYER: PC Fallback + XR Origin VR con VRPlayerRigManager
         // ═════════════════════════════════════════════════════════════════════════
-        private static void SetupPlayer(GameObject root)
+        private static Camera SetupPlayer(GameObject root)
         {
-            // ── XR Interaction Manager ────────────────────────────────────────────
             GameObject xriMgrObj = new GameObject("XR Interaction Manager");
             xriMgrObj.AddComponent<XRInteractionManager>();
 
             int playerLayer = LayerMask.NameToLayer("Player");
             if (playerLayer < 0) playerLayer = 0;
 
-            // ── XR Origin (VR) ────────────────────────────────────────────────────
-            string xrPrefabPath = "Assets/Samples/XR Interaction Toolkit/3.5.1/Starter Assets/Prefabs/XR Origin (XR Rig).prefab";
-            GameObject xrPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(xrPrefabPath);
+            GameObject playerSystem = new GameObject("Player_System");
+            playerSystem.transform.SetParent(root.transform, false);
+            playerSystem.transform.position = new Vector3(0f, 0.15f, -1.45f); // Sala 1, frente a la mesa de la bomba
+
+            VRPlayerRigManager rigMgr = playerSystem.AddComponent<VRPlayerRigManager>();
+            rigMgr.forceVRMode = false;
+
+            // XR Origin (VR Rig)
+            string vrPrefabPath = "Assets/VRTemplateAssets/Prefabs/Setup/Complete XR Origin Set Up Variant.prefab";
+            GameObject xrPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(vrPrefabPath);
+            if (xrPrefab == null)
+            {
+                xrPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Samples/XR Interaction Toolkit/3.5.1/Starter Assets/Prefabs/XR Origin (XR Rig).prefab");
+            }
+
             if (xrPrefab != null)
             {
-                GameObject xrRig = (GameObject)PrefabUtility.InstantiatePrefab(xrPrefab);
-                xrRig.name = "XR Origin (XR Rig)";
-                xrRig.transform.position = new Vector3(0f, 0.05f, 0f); // frente a la mesa de la bomba
+                GameObject xrRig = (GameObject)PrefabUtility.InstantiatePrefab(xrPrefab, playerSystem.transform);
+                xrRig.name = "XR Origin (VR Rig)";
+                xrRig.transform.localPosition = Vector3.zero;
+                xrRig.transform.localRotation = Quaternion.identity;
                 xrRig.layer = playerLayer;
 
                 CharacterController xrCC = xrRig.GetComponent<CharacterController>();
@@ -951,28 +945,25 @@ namespace DefusalGame.Editor
                     xrCC.center = new Vector3(0f, 0.9f, 0f);
                 }
 
-                AntigravityPlayerController agXR = xrRig.GetComponent<AntigravityPlayerController>();
-                if (agXR == null) agXR = xrRig.AddComponent<AntigravityPlayerController>();
-                Camera xrCam = xrRig.GetComponentInChildren<Camera>();
-                if (xrCam != null) agXR.headTransform = xrCam.transform;
-
-                SetupXRHandPhysics(xrRig, agXR);
+                rigMgr.vrOriginRig = xrRig;
             }
 
-            // ── PC TestingFallback ────────────────────────────────────────────────
-            // Colocar al jugador a 1.5m al sur de la bomba, mirando hacia ella
-            Vector3 spawnPos = new Vector3(0f, 0.05f, 0f);
-
+            // PC Testing Fallback (Desktop FPV)
             GameObject pcFallback = new GameObject("Player_PC_TestingFallback");
-            pcFallback.transform.position = spawnPos;
+            pcFallback.transform.SetParent(playerSystem.transform, false);
+            pcFallback.transform.localPosition = Vector3.zero;
+            pcFallback.transform.localRotation = Quaternion.identity;
             pcFallback.layer = playerLayer;
+            rigMgr.desktopFpvRig = pcFallback;
 
             CharacterController cc = pcFallback.AddComponent<CharacterController>();
             cc.height = 1.75f;
             cc.radius = 0.25f;
             cc.center = new Vector3(0f, 0.875f, 0f);
+            cc.stepOffset = 0.35f;
+            cc.skinWidth = 0.03f;
+            cc.minMoveDistance = 0.001f;
 
-            // Cámara
             GameObject camGo = new GameObject("Fallback_Camera");
             camGo.transform.SetParent(pcFallback.transform, false);
             camGo.transform.localPosition = new Vector3(0f, 1.65f, 0f);
@@ -983,56 +974,85 @@ namespace DefusalGame.Editor
             cam.nearClipPlane = 0.05f;
             camGo.AddComponent<AudioListener>();
 
-            // IMPORTANTE: FPSRaycastInteractor sobre la cámara para que el raycast funcione
             FPSRaycastInteractor raycast = camGo.AddComponent<FPSRaycastInteractor>();
             raycast.interactDistance = 3.5f;
             raycast.interactMask = ~0;
 
-            // Antigravity locomotion
-            AntigravityPlayerController pcAg = pcFallback.AddComponent<AntigravityPlayerController>();
-            pcAg.headTransform = camGo.transform;
-
-            // Script PC fallback
             Player_PC_TestingFallback pcScript = pcFallback.AddComponent<Player_PC_TestingFallback>();
             pcScript.playerCamera = cam;
 
-            // Mano virtual PC
-            GameObject pcHand = new GameObject("PC_VirtualHand");
-            pcHand.transform.SetParent(camGo.transform, false);
-            pcHand.transform.localPosition = new Vector3(0f, 0f, 0.8f);
-            SphereCollider sc = pcHand.AddComponent<SphereCollider>();
-            sc.radius = 0.18f;
-            sc.isTrigger = true;
-            AntigravityHandPhysics hp = pcHand.AddComponent<AntigravityHandPhysics>();
-            hp.playerController = pcAg;
+            rigMgr.ApplyMode();
+            return cam;
         }
 
-        private static void SetupXRHandPhysics(GameObject xrRig, AntigravityPlayerController ctrl)
+        // ═════════════════════════════════════════════════════════════════════════
+        // HELPERS: SPAWN DE MESHES MESHY Y PRIMITIVAS
+        // ═════════════════════════════════════════════════════════════════════════
+        private static GameObject SpawnRoomModel(GameObject parent, string name, string objPath, string matName, Vector3 pos, Quaternion rot, float scale)
         {
-            int handsLayer = LayerMask.NameToLayer("Hands");
-            if (handsLayer < 0) handsLayer = 0;
-
-            foreach (Transform t in xrRig.GetComponentsInChildren<Transform>(true))
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(objPath);
+            if (prefab == null)
             {
-                bool isLeft  = t.name.Contains("Left Controller")  || t.name.Contains("LeftHand")  || t.name.Contains("Left Hand");
-                bool isRight = t.name.Contains("Right Controller") || t.name.Contains("RightHand") || t.name.Contains("Right Hand");
-                if (!isLeft && !isRight) continue;
-
-                t.gameObject.layer = handsLayer;
-                SphereCollider col = t.GetComponent<SphereCollider>();
-                if (col == null) { col = t.gameObject.AddComponent<SphereCollider>(); col.radius = 0.08f; col.isTrigger = true; }
-                AntigravityHandPhysics ahp = t.GetComponent<AntigravityHandPhysics>();
-                if (ahp == null) ahp = t.gameObject.AddComponent<AntigravityHandPhysics>();
-                ahp.handType = isLeft ? AntigravityHandPhysics.HandType.Left : AntigravityHandPhysics.HandType.Right;
-                ahp.playerController = ctrl;
+                Debug.LogWarning($"[Room2SceneBuilder] No se encontró el modelo en: {objPath}");
+                return null;
             }
+
+            GameObject inst = UnityEngine.Object.Instantiate(prefab, parent.transform);
+            inst.name = name;
+            inst.transform.localPosition = pos;
+            inst.transform.localRotation = rot;
+            inst.transform.localScale = new Vector3(scale, scale, scale);
+
+            Material mat = Mat(matName);
+            if (mat != null)
+            {
+                foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
+                    r.sharedMaterial = mat;
+            }
+
+            // Eliminar colisionadores de malla fotogramétrica para paso libre y fluido
+            foreach (var col in inst.GetComponentsInChildren<Collider>(true))
+            {
+                UnityEngine.Object.DestroyImmediate(col);
+            }
+
+            return inst;
         }
 
-        // ═════════════════════════════════════════════════════════════════════════
-        // HELPERS
-        // ═════════════════════════════════════════════════════════════════════════
+        private static GameObject PlacePropMesh(GameObject parent, string name, string objPath, string matName,
+            Vector3 localPos, Quaternion rot, Vector3 scale, Vector3? colliderSize = null, Vector3? colliderCenter = null)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(objPath);
+            if (prefab == null) return null;
 
-        /// <summary>Crea un cubo primitivo y lo hijo de parent.</summary>
+            GameObject inst = UnityEngine.Object.Instantiate(prefab, parent.transform);
+            inst.name = name;
+            inst.transform.localPosition = localPos;
+            inst.transform.localRotation = rot;
+            inst.transform.localScale    = scale;
+
+            Material mat = Mat(matName);
+            if (mat != null)
+            {
+                foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
+                    r.sharedMaterial = mat;
+            }
+
+            foreach (var col in inst.GetComponentsInChildren<Collider>(true))
+            {
+                UnityEngine.Object.DestroyImmediate(col);
+            }
+
+            if (colliderSize.HasValue)
+            {
+                BoxCollider bc = inst.AddComponent<BoxCollider>();
+                bc.size = colliderSize.Value;
+                if (colliderCenter.HasValue) bc.center = colliderCenter.Value;
+            }
+
+            return inst;
+        }
+
         private static GameObject Box(GameObject parent, string name, Vector3 localPos, Vector3 size,
             Material mat, bool withRenderer = true)
         {
@@ -1047,49 +1067,6 @@ namespace DefusalGame.Editor
             else if (mat != null) { rend.sharedMaterial = mat; }
 
             return go;
-        }
-
-        /// <summary>Instancia un mesh Meshy AI y le asigna material.</summary>
-        private static GameObject PlaceMesh(GameObject parent, string name, string objPath, string matName,
-            Vector3 worldPos, Quaternion rot, Vector3 scale)
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(objPath);
-            GameObject inst;
-            if (prefab != null)
-            {
-                inst = UnityEngine.Object.Instantiate(prefab, parent.transform);
-                inst.name = name;
-            }
-            else
-            {
-                // Fallback: cubo de placeholder si el OBJ no se encontró
-                inst = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                inst.name = name + "_PLACEHOLDER";
-                inst.transform.SetParent(parent.transform, false);
-            }
-
-            inst.transform.position   = worldPos;
-            inst.transform.rotation   = rot;
-            inst.transform.localScale = scale;
-
-            Material mat = Mat(matName);
-            if (mat != null)
-            {
-                foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
-                    r.sharedMaterial = mat;
-            }
-
-            // Agregar MeshColliders para que los props sean sólidos
-            foreach (var mf in inst.GetComponentsInChildren<MeshFilter>(true))
-            {
-                if (mf.sharedMesh != null && mf.GetComponent<Collider>() == null)
-                {
-                    MeshCollider mc = mf.gameObject.AddComponent<MeshCollider>();
-                    mc.sharedMesh  = mf.sharedMesh;
-                }
-            }
-
-            return inst;
         }
 
         private static TextMeshPro MakeWorldTMP(GameObject parent, string n, Vector3 localPos, string text,

@@ -131,7 +131,14 @@ namespace DefusalGame.Save
             }
             else if (Instance != this)
             {
-                Destroy(gameObject);
+                if (GetComponent<Room2UIManager>() != null || GetComponent<Room2EscapeRoomManager>() != null)
+                {
+                    Destroy(this);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
                 return;
             }
         }
@@ -149,6 +156,7 @@ namespace DefusalGame.Save
         {
             if (Instance == this)
             {
+                Instance = null;
                 SceneManager.sceneLoaded -= OnSceneLoaded;
             }
         }
